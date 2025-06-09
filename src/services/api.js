@@ -2,7 +2,7 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000',
+  baseURL: import.meta.env.VITE_API_URL || 'https://estore-backend-if2a.onrender.com',
   withCredentials: true,              // ← allow cookies (guestId)
   headers: { 'Content-Type': 'application/json' },
 });
