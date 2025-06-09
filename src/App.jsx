@@ -1,5 +1,3 @@
-// src/App.jsx
-
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
@@ -12,7 +10,7 @@ import Checkout from './pages/Checkout';
 import Profile from './pages/Profile';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
-import ForgotPassword from './pages/ForgotPassword'; // ← import the ForgotPassword page
+import ForgotPassword from './pages/ForgotPassword';
 import OAuth from './pages/OAuth';
 
 import AdminDashboard from './pages/AdminDashboard';
@@ -21,27 +19,26 @@ import AdminProducts from './pages/admin/AdminProducts';
 import AdminCategories from './pages/admin/AdminCategories';
 import AdminOrders from './pages/admin/AdminOrders';
 import AdminAnalyticsCharts from './pages/admin/AdminAnalyticsCharts';
-import AdminReviews from './pages/admin/AdminReviews'; // ← import the new Reviews page
+import AdminReviews from './pages/admin/AdminReviews';
 
 import { ToastContainer } from 'react-toastify';
 import useAuthStore from './store/useAuthStore';
 
-// If an admin user tries to visit a “shop” page, kick them to /admin
+// Redirect logged-in admin users away from public routes
 function RedirectIfAdmin({ children }) {
   const user = useAuthStore((s) => s.user);
   React.useEffect(() => {
     if (user?.isAdmin) {
-      window.location.replace('/admin');
+      window.location.replace('/admin/users');
     }
   }, [user]);
   return children;
 }
 
-// Only allow logged‐in (non-admin) users to see certain routes
+// Protect user-only routes
 function RequireAuth({ children }) {
   const user = useAuthStore((s) => s.user);
   if (!user) {
-    // If no user, redirect to login
     return <Navigate to="/login" replace />;
   }
   return children;
@@ -51,29 +48,21 @@ export default function App() {
   return (
     <>
       <Routes>
-        {/* ============================= */}
-        {/* 1) ADMIN SECTION (FULL-WIDTH) */}
-        {/* ============================= */}
+        {/* ========== ADMIN SECTION ========== */}
         <Route path="/admin/*" element={<AdminDashboard />}>
-          <Route index element={<AdminUsers />} />
           <Route path="users" element={<AdminUsers />} />
           <Route path="products" element={<AdminProducts />} />
           <Route path="categories" element={<AdminCategories />} />
           <Route path="orders" element={<AdminOrders />} />
-          <Route path="reviews" element={<AdminReviews />} />          {/* ← New Reviews route */}
+          <Route path="reviews" element={<AdminReviews />} />
           <Route path="analytics/charts" element={<AdminAnalyticsCharts />} />
-          {/* Catch-all for any other /admin paths */}
           <Route path="*" element={<Navigate to="users" replace />} />
         </Route>
 
-        {/* =============================== */}
-        {/* 2) OAUTH CALLBACK (no layout)  */}
-        {/* =============================== */}
+        {/* ========== OAUTH CALLBACK ========== */}
         <Route path="/oauth" element={<OAuth />} />
 
-        {/* =============================== */}
-        {/* 3) SHOP / PUBLIC SECTION       */}
-        {/* =============================== */}
+        {/* ========== PUBLIC SHOP SECTION ========== */}
         <Route element={<Layout />}>
           <Route
             path="/"
@@ -100,7 +89,6 @@ export default function App() {
             }
           />
 
-          {/* ==== FORCE LOGIN FOR CART ==== */}
           <Route
             path="/cart"
             element={
@@ -111,7 +99,6 @@ export default function App() {
               </RequireAuth>
             }
           />
-
           <Route
             path="/checkout"
             element={
@@ -123,7 +110,6 @@ export default function App() {
             }
           />
 
-          {/* Login / Signup */}
           <Route
             path="/login"
             element={
@@ -140,8 +126,6 @@ export default function App() {
               </RedirectIfAdmin>
             }
           />
-
-          {/* Forgot Password */}
           <Route
             path="/forgot-password"
             element={
@@ -150,7 +134,6 @@ export default function App() {
               </RedirectIfAdmin>
             }
           />
-
           <Route
             path="/profile"
             element={
@@ -162,6 +145,7 @@ export default function App() {
             }
           />
 
+          {/* Catch-all for unknown public routes */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
