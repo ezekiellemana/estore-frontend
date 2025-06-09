@@ -1,68 +1,238 @@
-import React from 'react';
-import { Instagram, Facebook, Twitter } from 'lucide-react';
-import { motion } from 'framer-motion';
+// Checkout.jsx
+import React, { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import api from '../services/api';
+import { toast } from 'react-toastify';
+import AnimatedButton from '../components/AnimatedButton';
+import { jsPDF } from 'jspdf';
 
-export default function Footer() {
+export default function Checkout() {
+  const [cartItems, setCartItems] = useState([]);
+  const [loadingCart, setLoadingCart] = useState(true);
+  const [placingOrder, setPlacingOrder] = useState(false);
+  const [showAnimation, setShowAnimation] = useState(false);
+  const [orderPlaced, setOrderPlaced] = useState(false);
+  const [showPopup, setShowPopup] = useState(false);
+  const [receiptUrl, setReceiptUrl] = useState(null);
+  const [orderId, setOrderId] = useState(null);
+
+  useEffect(() => {
+    (async () => {
+      setLoadingCart(true);
+      try {
+        const { data } = await api.get('/api/cart');
+        setCartItems(data.items);
+      } catch {
+        toast.error('Could not load your cart.');
+      } finally {
+        setLoadingCart(false);
+      }
+    })();
+  }, []);
+
+  const subtotal = cartItems.reduce((sum, { product, quantity }) => {
+    const price = product.discount
+      ? product.price * (1 - product.discount / 100)
+      : product.price;
+    return sum + price * quantity;
+  }, 0);
+
+  const generatePDF = (id) => {
+    const doc = new jsPDF({ unit: 'pt', format: 'a6' });
+    const w = doc.internal.pageSize.getWidth();
+    let y = 20;
+    doc.setFillColor('#2255A3').rect(0, 0, w, 60, 'F');
+    doc.setFontSize(14).setTextColor('#FFF').setFont('helvetica', 'bold');
+    doc.text('eStore Receipt', 20, 28);
+    doc.setFontSize(9).setTextColor('#333').setFont('helvetica', 'normal');
+    doc.text(`Order ID: ${id}`, 20, (y = 70));
+    doc.text(`Date: ${new Date().toLocaleString()}`, 20, y + 12);
+    y += 40;
+    doc.setLineWidth(0.5).setDrawColor('#CCC').line(20, y, w - 20, y);
+    y += 20;
+    doc.setFontSize(8).setFont('helvetica', 'bold');
+    doc.text('Product', 24, y);
+    doc.text('Qty', 144, y);
+    doc.text('Total', w - 24, y, { align: 'right' });
+    y += 16;
+    doc.setFont('helvetica', 'normal');
+    cartItems.forEach(({ product, quantity }, idx) => {
+      const price = product.discount
+        ? product.price * (1 - product.discount / 100)
+        : product.price;
+      const total = (price * quantity).toFixed(2);
+      if (idx % 2 === 1) doc.setFillColor('#F9F9F9').rect(20, y - 12, w - 40, 16, 'F');
+      doc.text(product.name, 24, y);
+      doc.text(String(quantity), 144, y);
+      doc.text(total, w - 24, y, { align: 'right' });
+      y += 16;
+    });
+    y += 20;
+    doc.line(20, y, w - 20, y);
+    y += 20;
+    const shipping = 2000;
+    const totalAll = subtotal + shipping;
+    doc.setFont('helvetica', 'bold').setFontSize(10);
+    doc.text(`Subtotal: Tsh.${subtotal.toFixed(2)}`, 20, y);
+    doc.text(`Shipping: Tsh.${shipping}`, 20, y + 14);
+    doc.setFontSize(12).text(`TOTAL: Tsh.${totalAll.toLocaleString()}`, 20, y + 32);
+    doc.setFontSize(8).setFont('helvetica', 'italic').setTextColor('#666');
+    doc.text('Thank you for shopping at eStore!', 20, y + 50);
+    return URL.createObjectURL(doc.output('blob'));
+  };
+
+  const redirectToWhatsApp = () => {
+    const productLines = cartItems
+      .map(({ product, quantity }) => `• ${product.name} × ${quantity}`)
+      .join('%0A');
+
+    const message =
+      `🛒 New Order Alert from eStore!%0A%0A` +
+      `Order ID: ${orderId}%0A` +
+      `Items Ordered:%0A${productLines}%0A%0A` +
+      `Subtotal: Tsh.${subtotal.toFixed(2)}%0A` +
+      `Shipping: Tsh.2,000%0A` +
+      `Grand Total: Tsh.${(subtotal + 2000).toLocaleString()}%0A%0A` +
+      `Please process this order at your earliest convenience. 🙏`;
+
+    const number = import.meta.env.VITE_WHATSAPP_NUMBER;
+    const whatsappUrl = `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
+    window.location.href = whatsappUrl;
+  };
+
+  const placeOrder = async () => {
+    if (!cartItems.length) return toast.error('Cart is empty');
+    setPlacingOrder(true);
+    try {
+      const items = cartItems.map(({ product, quantity }) => ({
+        productId: product._id,
+        quantity,
+        price: product.discount
+          ? product.price * (1 - product.discount / 100)
+          : product.price,
+      }));
+      const { data } = await api.post('/api/orders', { items });
+      setOrderId(data._id);
+      setReceiptUrl(generatePDF(data._id));
+      setShowAnimation(true);
+      setShowPopup(true);
+      setOrderPlaced(true);
+      toast.success('Order placed!');
+      setTimeout(() => setShowPopup(false), 2000);
+      setTimeout(() => {
+        setShowAnimation(false);
+        redirectToWhatsApp();
+      }, 3000);
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to place order');
+    } finally {
+      setPlacingOrder(false);
+    }
+  };
+
+  const downloadReceipt = () => {
+    if (!receiptUrl || !orderId) return;
+    const a = document.createElement('a');
+    a.href = receiptUrl;
+    a.download = `receipt_${orderId}.pdf`;
+    a.click();
+  };
+
+  if (loadingCart) return <p className="text-center py-20">Loading…</p>;
+  if (!cartItems.length) return <p className="text-center py-20">Cart is empty</p>;
+
+  const particles = Array.from({ length: 20 }).map((_, i) => ({
+    id: i,
+    x: Math.random() * window.innerWidth,
+    delay: Math.random() * 0.5,
+    rotate: Math.random() * 360,
+  }));
+
   return (
-    <motion.footer
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6 }}
-      className="bg-gradient-to-r from-primary-800 to-primary-700 text-neutral-100"
-    >
-      <div className="max-w-7xl mx-auto px-4 py-6 flex flex-col md:flex-row items-center justify-between text-sm md:text-base">
-        {/* Address */}
-        <div className="space-y-1">
-          <p className="font-extrabold">eStore Headquarters</p>
-          <p>41218 University Of Dodoma, Dodoma</p>
-          <p className="text-xs">support@estore.co.tz | +255 75 277 2587</p>
-        </div>
-
-        {/* Quote */}
-        <motion.p
-          initial={{ scale: 0.9 }}
-          animate={{ scale: 1 }}
-          transition={{ delay: 0.2, duration: 0.5 }}
-          className="italic font-semibold text-center mt-4 md:mt-0 text-neutral-200"
+    <div className="relative max-w-md mx-auto py-8 space-y-6">
+      <h2 className="text-3xl font-bold text-center">Checkout</h2>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white rounded-xl shadow-lg p-6 space-y-4"
+      >
+        <p>Subtotal: Tsh.{subtotal.toFixed(2)}</p>
+        <p>Shipping: Tsh.2,000</p>
+        <p className="text-xl font-bold">
+          Total: Tsh.{(subtotal + 2000).toLocaleString()}
+        </p>
+        <AnimatedButton
+          onClick={placeOrder}
+          className="w-full py-3"
+          disabled={placingOrder || orderPlaced}
         >
-          “Your satisfaction is our inspiration.”
-        </motion.p>
+          {placingOrder ? 'Placing…' : orderPlaced ? 'Placed' : 'Place Order'}
+        </AnimatedButton>
+      </motion.div>
 
-        {/* Social Icons */}
-        <div className="flex space-x-6 mt-4 md:mt-0">
-          <motion.a
-            href="https://www.instagram.com/estore.__/"
-            target="_blank"
-            rel="noopener noreferrer"
-            whileHover={{ scale: 1.2, color: '#F77737' }}
-            className="text-neutral-100 transition-colors"
-          >
-            <Instagram size={24} />
-          </motion.a>
-          <motion.a
-            href="https://facebook.com/estore"
-            target="_blank"
-            rel="noopener noreferrer"
-            whileHover={{ scale: 1.2, color: '#4267B2' }}
-            className="text-neutral-100 transition-colors"
-          >
-            <Facebook size={24} />
-          </motion.a>
-          <motion.a
-            href="https://twitter.com/estore"
-            target="_blank"
-            rel="noopener noreferrer"
-            whileHover={{ scale: 1.2, color: '#1DA1F2' }}
-            className="text-neutral-100 transition-colors"
-          >
-            <Twitter size={24} />
-          </motion.a>
-        </div>
-      </div>
+      {orderPlaced && (
+        <AnimatedButton
+          onClick={downloadReceipt}
+          className="w-full py-3 bg-green-600 hover:bg-green-700"
+        >
+          Download Receipt
+        </AnimatedButton>
+      )}
 
-      <div className="border-t border-primary-600 bg-primary-900 text-center text-xs py-3 font-semibold">
-        &copy; {new Date().getFullYear()} eStore. All rights reserved.
-      </div>
-    </motion.footer>
+      <AnimatePresence>
+        {showAnimation && (
+          <>
+            {particles.map(({ id, x, delay, rotate }) => (
+              <motion.div
+                key={`balloon_${id}`}
+                initial={{ y: window.innerHeight + 50, x }}
+                animate={{ y: -50, x: x + (Math.random() * 100 - 50), rotate: rotate + 360 }}
+                transition={{ duration: 2 + Math.random(), delay }}
+                style={{ left: x }}
+                className="absolute text-5xl max-sm:text-3xl"
+              >🎈</motion.div>
+            ))}
+            {particles.map(({ id, x, delay, rotate }) => (
+              <motion.div
+                key={`confetti_${id}`}
+                initial={{ y: -20, x, opacity: 0 }}
+                animate={{ y: window.innerHeight + 20, opacity: 1, rotate }}
+                transition={{ duration: 3, delay }}
+                style={{ left: x }}
+                className="absolute text-lg max-sm:text-base"
+              >🎉</motion.div>
+            ))}
+          </>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showPopup && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
+          >
+            <motion.div
+              initial={{ scale: 0.7, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.7, opacity: 0 }}
+              className="bg-gradient-to-r from-blue-400 to-indigo-600 text-white rounded-3xl p-8 shadow-2xl text-center max-w-sm mx-4"
+            >
+              <motion.div
+                initial={{ rotate: 0 }}
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                className="text-6xl mb-4"
+              >🎊</motion.div>
+              <h3 className="text-3xl font-bold mb-2">Congratulations!</h3>
+              <p className="text-lg opacity-80">Your order #{orderId} is confirmed</p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }

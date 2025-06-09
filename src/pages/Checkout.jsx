@@ -82,14 +82,21 @@ export default function Checkout() {
   };
 
   const redirectToWhatsApp = () => {
-    const productLines = cartItems.map(({ product, quantity }) => {
-      return `• ${product.name} × ${quantity}`;
-    }).join('%0A');
+    const productLines = cartItems
+      .map(({ product, quantity }) => `• ${product.name} × ${quantity}`)
+      .join('%0A');
 
-    const message = `🛒 New Order Alert from eStore!%0A%0AOrder ID: ${orderId}%0AItems Ordered:%0A${productLines}%0A%0ASubtotal: Tsh.${subtotal.toFixed(2)}%0AShipping: Tsh.2,000%0AGrand Total: Tsh.${(subtotal + 2000).toLocaleString()}%0A%0APlease process this order at your earliest convenience. 🙏`;
+    const message =
+      `🛒 New Order Alert from eStore!%0A%0A` +
+      `Order ID: ${orderId}%0A` +
+      `Items Ordered:%0A${productLines}%0A%0A` +
+      `Subtotal: Tsh.${subtotal.toFixed(2)}%0A` +
+      `Shipping: Tsh.2,000%0A` +
+      `Grand Total: Tsh.${(subtotal + 2000).toLocaleString()}%0A%0A` +
+      `Please process this order at your earliest convenience. 🙏`;
 
-    const whatsappNumber = import.meta.env.VITE_WHATSAPP_NUMBER;
-    const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
+    const number = import.meta.env.VITE_WHATSAPP_NUMBER;
+    const whatsappUrl = `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
     window.location.href = whatsappUrl;
   };
 
@@ -183,7 +190,7 @@ export default function Checkout() {
                 animate={{ y: -50, x: x + (Math.random() * 100 - 50), rotate: rotate + 360 }}
                 transition={{ duration: 2 + Math.random(), delay }}
                 style={{ left: x }}
-                className="absolute text-5xl"
+                className="absolute text-5xl max-sm:text-3xl"
               >🎈</motion.div>
             ))}
             {particles.map(({ id, x, delay, rotate }) => (
@@ -193,7 +200,7 @@ export default function Checkout() {
                 animate={{ y: window.innerHeight + 20, opacity: 1, rotate }}
                 transition={{ duration: 3, delay }}
                 style={{ left: x }}
-                className="absolute text-lg"
+                className="absolute text-lg max-sm:text-base"
               >🎉</motion.div>
             ))}
           </>
