@@ -82,10 +82,14 @@ export default function Checkout() {
   };
 
   const redirectToWhatsApp = () => {
-    const productLines = cartItems.map(({ product, quantity }) => `- ${product.name} x${quantity}`).join('%0A');
-    const message = `Hello, I just placed an order (ID: ${orderId}) on eStore.%0A%0AItems:%0A${productLines}%0A%0ATotal: Tsh.${(subtotal + 2000).toLocaleString()}%0AThank you!`;
-    const phone = import.meta.env.VITE_WHATSAPP_NUMBER || '255754123456';
-    const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+    const productLines = cartItems.map(({ product, quantity }) => {
+      return `• ${product.name} × ${quantity}`;
+    }).join('%0A');
+
+    const message = `🛒 New Order Alert from eStore!%0A%0AOrder ID: ${orderId}%0AItems Ordered:%0A${productLines}%0A%0ASubtotal: Tsh.${subtotal.toFixed(2)}%0AShipping: Tsh.2,000%0AGrand Total: Tsh.${(subtotal + 2000).toLocaleString()}%0A%0APlease process this order at your earliest convenience. 🙏`;
+
+    const whatsappNumber = import.meta.env.VITE_WHATSAPP_NUMBER;
+    const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
     window.location.href = whatsappUrl;
   };
 
@@ -96,7 +100,9 @@ export default function Checkout() {
       const items = cartItems.map(({ product, quantity }) => ({
         productId: product._id,
         quantity,
-        price: product.discount ? product.price * (1 - product.discount / 100) : product.price,
+        price: product.discount
+          ? product.price * (1 - product.discount / 100)
+          : product.price,
       }));
       const { data } = await api.post('/api/orders', { items });
       setOrderId(data._id);
