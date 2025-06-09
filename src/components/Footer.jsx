@@ -14,8 +14,8 @@ export default function Footer() {
         {/* Address */}
         <div className="space-y-1">
           <p className="font-extrabold">eStore Headquarters</p>
-          <p>1234 Market Street, Dar es Salaam</p>
-          <p className="text-xs">support@estore.co.tz | +255 22 123 4567</p>
+          <p>41218 University Of Dodoma, Dodoma</p>
+          <p className="text-xs">support@estore.co.tz | +255 75 277 2587</p>
         </div>
 
         {/* Quote */}
