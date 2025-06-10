@@ -1,5 +1,4 @@
-// src/pages/ProductDetails.jsx
-
+// All your imports remain unchanged
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import api from '../services/api';
@@ -18,9 +17,6 @@ export default function ProductDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
-  const setPendingReview = useAuthStore((s) => s.setPendingReview);
-  const pendingReview = useAuthStore((s) => s.pendingReview);
-  const clearPendingReview = useAuthStore((s) => s.clearPendingReview);
 
   const [product, setProduct] = useState(null);
   const [reviews, setReviews] = useState([]);
@@ -38,16 +34,17 @@ export default function ProductDetails() {
   const didFetchProduct = useRef(false);
   const didFetchReviews = useRef(false);
 
-  // Fetch product once
   useEffect(() => {
     if (didFetchProduct.current) return;
     didFetchProduct.current = true;
 
-    (async () => {
+    const fetchProduct = async () => {
       try {
         const { data } = await api.get(`/api/products/${id}`);
         setProduct(data);
-        if (data.images?.length) setSelectedImageIndex(0);
+        if (Array.isArray(data.images) && data.images.length > 0) {
+          setSelectedImageIndex(0);
+        }
       } catch (err) {
         console.error(err);
         if (err.response?.status === 404) {
@@ -59,15 +56,16 @@ export default function ProductDetails() {
       } finally {
         setLoadingProduct(false);
       }
-    })();
+    };
+
+    fetchProduct();
   }, [id, navigate]);
 
-  // Fetch reviews once
   useEffect(() => {
     if (didFetchReviews.current) return;
     didFetchReviews.current = true;
 
-    (async () => {
+    const fetchReviews = async () => {
       try {
         const { data } = await api.get(`/api/reviews/${id}`);
         setReviews(data);
@@ -77,17 +75,10 @@ export default function ProductDetails() {
       } finally {
         setLoadingReviews(false);
       }
-    })();
-  }, [id]);
+    };
 
-  // Restore pending review after login
-  useEffect(() => {
-    if (user && pendingReview) {
-      setNewRating(pendingReview.rating);
-      setNewComment(pendingReview.comment);
-      clearPendingReview();
-    }
-  }, [user, pendingReview, clearPendingReview]);
+    fetchReviews();
+  }, [id]);
 
   if (loadingProduct) {
     return (
@@ -96,6 +87,7 @@ export default function ProductDetails() {
       </div>
     );
   }
+
   if (!product) return null;
 
   const hasDiscount = product.discount > 0;
@@ -112,11 +104,9 @@ export default function ProductDetails() {
       toast.error('Out of stock.');
       return;
     }
+
     try {
-      await api.post('/api/cart', {
-        productId: product._id,
-        quantity: 1,
-      });
+      await api.post('/api/cart', { productId: product._id, quantity: 1 });
       toast.success('Added to cart.');
       navigate('/cart');
     } catch (err) {
@@ -132,16 +122,13 @@ export default function ProductDetails() {
   );
 
   const goToPage = (page) => {
-    if (page >= 1 && page <= totalPages) setCurrentPage(page);
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
   };
 
   const submitReview = async (e) => {
     e.preventDefault();
-    if (!user) {
-      setPendingReview({ rating: newRating, comment: newComment });
-      setShowAuthModal(true);
-      return;
-    }
     if (newRating < 1 || !newComment.trim()) {
       toast.error('Please provide both rating and comment.');
       return;
@@ -160,7 +147,13 @@ export default function ProductDetails() {
       setCurrentPage(1);
     } catch (err) {
       console.error('Failed to submit review:', err);
-      toast.error(err.response?.data?.error || 'Failed to submit review.');
+      if (err.response?.status === 401) {
+          setShowAuthModal(true); // Show login/signup modal
+        } else if (err.response?.data?.error) {
+          toast.error(err.response.data.error);
+        } else {
+          toast.error('Failed to submit review.');
+        }
     } finally {
       setSubmittingReview(false);
     }
@@ -177,7 +170,7 @@ export default function ProductDetails() {
         <div className="flex flex-col md:flex-row gap-8">
           {/* IMAGE GALLERY */}
           <div className="flex-1">
-            {product.images?.length ? (
+            {product.images?.length > 0 ? (
               <>
                 <img
                   loading="lazy"
@@ -213,7 +206,7 @@ export default function ProductDetails() {
             )}
           </div>
 
-          {/* DETAILS */}
+          {/* PRODUCT DETAILS */}
           <div className="flex-1 space-y-4">
             <div className="flex justify-between items-start">
               <h2 className="text-3xl font-bold">{product.name}</h2>
@@ -242,18 +235,19 @@ export default function ProductDetails() {
             <p className="text-sm text-neutral-500">
               Category: {product.category?.name || 'Uncategorized'}
             </p>
-            <div className="flex items-center gap-1 text-sm text-yellow-600">
-              <FaStar /> {product.avgRating.toFixed(1)}{' '}
+
+            <div className="flex items-center text-sm text-yellow-600 gap-1">
+              <FaStar />
+              {product.avgRating.toFixed(1)}
               <span className="text-neutral-500">({product.totalReviews})</span>
             </div>
+
             <p className="text-neutral-600">{product.description}</p>
 
             <div className="flex items-center gap-4 pt-4">
               {product.stock > 0 ? (
                 <>
-                  <span className="text-green-600 text-sm">
-                    In Stock ({product.stock})
-                  </span>
+                  <span className="text-green-600 text-sm">In Stock ({product.stock})</span>
                   <button
                     onClick={handleAddToCart}
                     className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-2 rounded-2xl"
@@ -268,13 +262,13 @@ export default function ProductDetails() {
           </div>
         </div>
 
-        {/* REVIEWS */}
+        {/* REVIEW SECTION */}
         <div className="space-y-4">
           <h3 className="text-2xl font-semibold">Customer Reviews</h3>
 
           {loadingReviews ? (
             <p className="text-neutral-500">Loading reviews…</p>
-          ) : !reviews.length ? (
+          ) : reviews.length === 0 ? (
             <p className="text-neutral-500">No reviews yet. Be the first!</p>
           ) : (
             <>
@@ -282,9 +276,7 @@ export default function ProductDetails() {
                 {displayedReviews.map((rev) => (
                   <li key={rev._id} className="border-b pb-4">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium">
-                        {rev.user?.name || 'Anonymous'}
-                      </span>
+                      <span className="font-medium">{rev.user?.name || 'Anonymous'}</span>
                       <div className="flex items-center text-yellow-500">
                         {[...Array(5)].map((_, i) => (
                           <FaStar
@@ -293,9 +285,7 @@ export default function ProductDetails() {
                           />
                         ))}
                       </div>
-                      <span className="text-sm text-neutral-500 ml-2">
-                        {rev.rating}/5
-                      </span>
+                      <span className="text-sm text-neutral-500 ml-2">{rev.rating}/5</span>
                     </div>
                     {rev.comment && <p className="mt-1">{rev.comment}</p>}
                     <p className="text-xs text-neutral-400">
@@ -329,7 +319,7 @@ export default function ProductDetails() {
             </>
           )}
 
-          {/* REVIEW FORM */}
+          {/* SUBMIT REVIEW FORM */}
           <form onSubmit={submitReview} className="pt-6 border-t space-y-4">
             <h4 className="text-xl font-semibold">Leave a Review</h4>
             <div className="flex gap-2">
@@ -366,7 +356,7 @@ export default function ProductDetails() {
       <AnimatePresence>
         {showAuthModal && (
           <motion.div
-            key="auth-modal"
+            key="modal"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -378,18 +368,20 @@ export default function ProductDetails() {
               exit={{ scale: 0.9, opacity: 0 }}
               className="bg-white rounded-2xl p-6 text-center shadow-lg w-80"
             >
-              <h3 className="text-xl font-bold mb-2">You Must Be Logged In</h3>
-              <p className="text-neutral-600 mb-4">
-                You must be logged in to <strong>review this product</strong>. Don’t worry, your comment will be saved!
-              </p>
+              <h3 className="text-xl font-bold mb-2">Please Log In</h3>
+              <p className="text-neutral-600 mb-4">You need to be logged in to add items to your cart.</p>
               <div className="flex justify-center gap-4">
                 <Link to="/login">
-                  <button className="bg-primary-600 text-white px-4 py-2 rounded-2xl hover:bg-primary-700 text-sm">
+                  <button
+                    className="bg-primary-600 text-white px-4 py-2 rounded-2xl hover:bg-primary-700 text-sm"
+                  >
                     Log In
                   </button>
                 </Link>
                 <Link to="/signup">
-                  <button className="bg-accent-600 text-white px-4 py-2 rounded-2xl hover:bg-accent-700 text-sm">
+                  <button
+                    className="bg-accent-600 text-white px-4 py-2 rounded-2xl hover:bg-accent-700 text-sm"
+                  >
                     Sign Up
                   </button>
                 </Link>
