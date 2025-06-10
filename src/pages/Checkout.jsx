@@ -84,14 +84,25 @@ export default function Checkout() {
   };
 
   const buildWhatsAppMessage = (orderId) => {
+    const number = import.meta.env.VITE_WHATSAPP_NUMBER;
+
     const lineItems = cartItems.map(({ product, quantity }) => {
-      const price = product.discount ? product.price * (1 - product.discount / 100) : product.price;
-      return `- ${product.name} x${quantity} = Tsh.${(price * quantity).toLocaleString()}`;
+      const price = product.discount
+        ? product.price * (1 - product.discount / 100)
+        : product.price;
+      const itemTotal = price * quantity;
+      return `• ${product.name} x${quantity} = Tsh.${itemTotal.toLocaleString('en-US', { minimumFractionDigits: 0 })}`;
     });
+
     const total = subtotal + shipping;
-    const message = `Hello! I just placed order #${orderId}\n\n${lineItems.join("\n")}\n\nSubtotal: Tsh.${subtotal.toLocaleString()}\nShipping: Tsh.${shipping.toLocaleString()}\nTOTAL: Tsh.${total.toLocaleString()}`;
-    return `https://wa.me/?text=${encodeURIComponent(message)}`;
+
+    const message = `Hello! I just placed an order (#${orderId}) from eStore.\n\n${lineItems.join(
+      '\n'
+    )}\n\nSubtotal: Tsh.${subtotal.toLocaleString('en-US')}\nShipping: Tsh.${shipping.toLocaleString('en-US')}\n\nTOTAL: Tsh.${total.toLocaleString('en-US')}\n\nThank you!`;
+
+    return `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
   };
+
 
   const placeOrder = async () => {
     if (!cartItems.length) return toast.error('Cart is empty');
