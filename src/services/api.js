@@ -24,6 +24,7 @@ api.interceptors.response.use(
   (error) => {
     const status = error.response?.status;
     const url = error.config?.url || '';
+    const message = error.message;
 
     const isAnalytics = url.includes('/api/admin/analytics');
     const isAuthEndpoint =
@@ -31,10 +32,12 @@ api.interceptors.response.use(
       url.includes('/api/users/register') ||
       url.includes('/api/users/signup');
 
-    if (status === 401 && !isAnalytics && !isAuthEndpoint) {
-      toast.error('Authentication required. Please log in.');
+    if (message === 'Network Error') {
+      toast.error('🌐 Network error: Check your internet or try again.');
+    } else if (status === 401 && !isAnalytics && !isAuthEndpoint) {
+      toast.error('🔒 Login required. Please sign in first.');
     } else if (status >= 500) {
-      toast.error('Server error. Please try again later.');
+      toast.error('💥 Server error. Try again later.');
     } else if (status === 400 && error.response?.data?.error) {
       toast.error(error.response.data.error);
     }
@@ -42,5 +45,6 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
 
 export default api;
