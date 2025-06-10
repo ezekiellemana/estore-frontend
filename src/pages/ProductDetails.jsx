@@ -129,6 +129,12 @@ export default function ProductDetails() {
 
   const submitReview = async (e) => {
     e.preventDefault();
+
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
+
     if (newRating < 1 || !newComment.trim()) {
       toast.error('Please provide both rating and comment.');
       return;
@@ -147,13 +153,11 @@ export default function ProductDetails() {
       setCurrentPage(1);
     } catch (err) {
       console.error('Failed to submit review:', err);
-      if (err.response?.status === 401) {
-          setShowAuthModal(true); // Show login/signup modal
-        } else if (err.response?.data?.error) {
-          toast.error(err.response.data.error);
-        } else {
-          toast.error('Failed to submit review.');
-        }
+      if (err.response?.data?.error) {
+        toast.error(err.response.data.error);
+      } else {
+        toast.error('Failed to submit review.');
+      }
     } finally {
       setSubmittingReview(false);
     }
