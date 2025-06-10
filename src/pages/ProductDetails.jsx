@@ -1,4 +1,3 @@
-// All your imports remain unchanged
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import api from '../services/api';
@@ -17,6 +16,9 @@ export default function ProductDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
+  const setPendingReview = useAuthStore((s) => s.setPendingReview);
+  const pendingReview = useAuthStore((s) => s.pendingReview);
+  const clearPendingReview = useAuthStore((s) => s.clearPendingReview);
 
   const [product, setProduct] = useState(null);
   const [reviews, setReviews] = useState([]);
@@ -80,6 +82,14 @@ export default function ProductDetails() {
     fetchReviews();
   }, [id]);
 
+  useEffect(() => {
+    if (user && pendingReview) {
+      setNewRating(pendingReview.rating);
+      setNewComment(pendingReview.comment);
+      clearPendingReview();
+    }
+  }, [user, pendingReview, clearPendingReview]);
+
   if (loadingProduct) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -131,6 +141,7 @@ export default function ProductDetails() {
     e.preventDefault();
 
     if (!user) {
+      setPendingReview({ rating: newRating, comment: newComment });
       setShowAuthModal(true);
       return;
     }
@@ -162,6 +173,7 @@ export default function ProductDetails() {
       setSubmittingReview(false);
     }
   };
+
 
   return (
     <>
