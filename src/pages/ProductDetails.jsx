@@ -6,8 +6,6 @@ import api from '../services/api';
 import { toast } from 'react-toastify';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaStar } from 'react-icons/fa';
-import { HiCheckCircle } from 'react-icons/hi2';
-import { useSwipeable } from 'react-swipeable';
 import useAuthStore from '../store/useAuthStore';
 
 export default function ProductDetails() {
@@ -15,102 +13,123 @@ export default function ProductDetails() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
 
-  // Product and review state
   const [product, setProduct] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [loadingProduct, setLoadingProduct] = useState(true);
   const [loadingReviews, setLoadingReviews] = useState(true);
 
-  // Review submission state
   const [newRating, setNewRating] = useState(0);
   const [newComment, setNewComment] = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
 
-  // Pagination for reviews
+  // Pagination state
   const REVIEWS_PER_PAGE = 3;
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Gallery
+  // Gallery state
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
-  // Modal for auth
+  // “Please log in or sign up” modal state
   const [showAuthModal, setShowAuthModal] = useState(false);
 
-  // Star breakdown
-  const [starCounts, setStarCounts] = useState({ 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 });
-
-  // StrictMode double-fetch prevention
+  // Prevent double‐fetch under StrictMode
   const didFetchProduct = useRef(false);
   const didFetchReviews = useRef(false);
 
-  // Fetch product
+  // Fetch product details
   useEffect(() => {
     if (didFetchProduct.current) return;
     didFetchProduct.current = true;
-    setLoadingProduct(true);
-    api.get(`/api/products/${id}`)
-      .then(({ data }) => {
+
+    const fetchProduct = async () => {
+      try {
+        const { data } = await api.get(`/api/products/${id}`);
         setProduct(data);
-        if (data.images?.length) setSelectedImageIndex(0);
-      })
-      .catch(err => {
+
+        // If there are images, default to index 0
+        if (Array.isArray(data.images) && data.images.length > 0) {
+          setSelectedImageIndex(0);
+        }
+      } catch (err) {
+        console.error(err);
         if (err.response?.status === 404) {
           toast.error('Product not found.');
           navigate('/products');
-        } else {
+        } else if (err.response?.status !== 500) {
           toast.error('Failed to load product.');
         }
-      })
-      .finally(() => setLoadingProduct(false));
+      } finally {
+        setLoadingProduct(false);
+      }
+    };
+
+    fetchProduct();
   }, [id, navigate]);
 
-  // Fetch reviews
+  // Fetch reviews for this product
   useEffect(() => {
     if (didFetchReviews.current) return;
     didFetchReviews.current = true;
-    setLoadingReviews(true);
-    api.get(`/api/reviews/${id}`)
-      .then(({ data }) => {
+
+    const fetchReviews = async () => {
+      try {
+        const { data } = await api.get(`/api/reviews/${id}`);
         setReviews(data);
-        const stars = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
-        data.forEach(r => (stars[r.rating] = (stars[r.rating] || 0) + 1));
-        setStarCounts(stars);
-      })
-      .catch(err => {
+      } catch (err) {
+        console.error('Failed to fetch reviews:', err);
         toast.error('Could not load reviews.');
-      })
-      .finally(() => setLoadingReviews(false));
+      } finally {
+        setLoadingReviews(false);
+      }
+    };
+
+    fetchReviews();
   }, [id]);
 
-  // Discounted price calculation
-  const hasDiscount = product?.discount > 0;
-  const discountedPrice = hasDiscount ? product.price * (1 - product.discount / 100) : product?.price;
+  if (loadingProduct) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <p className="text-neutral-500">Loading product…</p>
+      </div>
+    );
+  }
 
-  // Swiping gallery handlers
-  const swipeHandlers = useSwipeable({
-    onSwipedLeft: () =>
-      setSelectedImageIndex(i => (product.images && i < product.images.length - 1 ? i + 1 : i)),
-    onSwipedRight: () =>
-      setSelectedImageIndex(i => (i > 0 ? i - 1 : i)),
-    trackMouse: true,
-  });
+  if (!product) {
+    return null;
+  }
 
-  // Add to cart logic
+  // Calculate discounted price if needed
+  const hasDiscount = product.discount > 0;
+  const discountedPrice = hasDiscount
+    ? product.price * (1 - product.discount / 100)
+    : product.price;
+
+  // handleAddToCart now prompts login/signup if user is not authenticated
   const handleAddToCart = async () => {
     if (!user) {
       setShowAuthModal(true);
       return;
     }
+
     if (product.stock < 1) {
       toast.error('Cannot add to cart: out of stock.');
       return;
     }
+
     try {
-      await api.post('/api/cart', { productId: product._id, quantity: 1 });
-      toast.success('Added to cart. 🛒');
+      await api.post('/api/cart', {
+        productId: product._id,
+        quantity: 1,
+      });
+      toast.success('Added to cart.');
       navigate('/cart');
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to add to cart.');
+      console.error('Failed to add to cart:', err);
+      if (err.response?.data?.error) {
+        toast.error(err.response.data.error);
+      } else {
+        toast.error('Failed to add to cart.');
+      }
     }
   };
 
@@ -120,12 +139,15 @@ export default function ProductDetails() {
     (currentPage - 1) * REVIEWS_PER_PAGE,
     currentPage * REVIEWS_PER_PAGE
   );
-  const goToPage = pageNum => pageNum >= 1 && pageNum <= totalPages && setCurrentPage(pageNum);
 
-  // Review submission logic
-  const submitReview = async e => {
+  const goToPage = (pageNum) => {
+    if (pageNum < 1 || pageNum > totalPages) return;
+    setCurrentPage(pageNum);
+  };
+
+  const submitReview = async (e) => {
     e.preventDefault();
-    if (newRating < 1 || !newComment.trim()) {
+    if (newRating < 1 || newComment.trim() === '') {
       toast.error('Please provide a rating and comment.');
       return;
     }
@@ -138,77 +160,65 @@ export default function ProductDetails() {
       toast.success('Review submitted.');
       setNewRating(0);
       setNewComment('');
+      // Reload reviews and reset pagination
       setLoadingReviews(true);
       const { data } = await api.get(`/api/reviews/${product._id}`);
       setReviews(data);
-      const stars = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
-      data.forEach(r => (stars[r.rating] = (stars[r.rating] || 0) + 1));
-      setStarCounts(stars);
       setCurrentPage(1);
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to submit review.');
+      console.error('Failed to submit review:', err);
+      if (err.response?.data?.error) {
+        toast.error(err.response.data.error);
+      } else {
+        toast.error('Failed to submit review.');
+      }
     } finally {
       setSubmittingReview(false);
       setLoadingReviews(false);
     }
   };
 
-  // Star percentage helper
-  const totalReviews = Object.values(starCounts).reduce((a, b) => a + b, 0);
-  const starPercent = n =>
-    totalReviews ? ((starCounts[n] / totalReviews) * 100).toFixed(1) : 0;
-
-  // Loading state
-  if (loadingProduct)
-    return (
-      <div className="flex justify-center items-center h-64">
-        <p className="text-neutral-500">Loading product…</p>
-      </div>
-    );
-  if (!product) return null;
-
   return (
     <>
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="max-w-4xl mx-auto p-6 md:p-8 bg-white rounded-2xl shadow-card space-y-8"
+        className="max-w-4xl mx-auto p-8 bg-white rounded-2xl shadow-card space-y-8"
       >
-        {/* --- Product Section --- */}
+        {/* Product Summary */}
         <div className="flex flex-col md:flex-row space-y-6 md:space-y-0 md:space-x-8">
-          {/* --- Gallery --- */}
-          <div className="flex-1 select-none" {...swipeHandlers}>
-            {product.images?.length ? (
-              <>
-                <motion.img
-                  key={product.images[selectedImageIndex]}
+          {/* Image Gallery */}
+          <div className="flex-1">
+            {Array.isArray(product.images) && product.images.length > 0 ? (
+              <div className="w-full">
+                {/* Main Image */}
+                <img
                   src={product.images[selectedImageIndex]}
-                  alt={`${product.name} (${selectedImageIndex + 1})`}
+                  alt={`${product.name} (view ${selectedImageIndex + 1})`}
                   className="w-full h-80 object-cover rounded-2xl border border-neutral-200"
-                  initial={{ opacity: 0.7, scale: 0.98 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.25 }}
                 />
+
+                {/* Thumbnails */}
                 <div className="mt-4 flex space-x-2 overflow-x-auto">
                   {product.images.map((imgUrl, idx) => (
                     <button
                       key={idx}
                       onClick={() => setSelectedImageIndex(idx)}
-                      className={`flex-shrink-0 border-2 rounded-md overflow-hidden w-16 h-16 ${
-                        selectedImageIndex === idx
-                          ? 'border-primary'
-                          : 'border-transparent'
+                      className={`flex-shrink-0 border-2 rounded-md overflow-hidden ${
+                        idx === selectedImageIndex
+                          ? 'border-accent-500'
+                          : 'border-transparent hover:border-neutral-300'
                       }`}
                     >
                       <img
                         src={imgUrl}
-                        alt={`Thumb ${idx + 1}`}
-                        className="w-full h-full object-cover"
+                        alt={`${product.name} thumbnail ${idx + 1}`}
+                        className="w-16 h-16 object-cover"
                       />
                     </button>
                   ))}
                 </div>
-              </>
+              </div>
             ) : (
               <div className="w-full h-80 bg-neutral-100 rounded-2xl flex items-center justify-center">
                 <span className="text-neutral-500">No image</span>
@@ -216,191 +226,243 @@ export default function ProductDetails() {
             )}
           </div>
 
-          {/* --- Details --- */}
-          <div className="flex-1 space-y-4">
-            <div className="flex items-center justify-between">
-              <h1 className="text-2xl md:text-3xl font-bold text-neutral-800">
+          {/* Details */}
+          <div className="flex-1 flex flex-col">
+            <div className="flex justify-between items-center">
+              <h2 className="text-3xl font-semibold text-neutral-800">
                 {product.name}
-              </h1>
-              <Link
-                to="/products"
-                className="text-primary underline text-sm"
-              >
-                ← Back
+              </h2>
+              <Link to="/products" className="text-accent-500 hover:underline text-sm">
+                ← Back to Products
               </Link>
             </div>
-            <div className="text-xl font-semibold">
+
+            {/* Price */}
+            <div className="mt-4">
               {hasDiscount ? (
-                <>
-                  <span className="text-red-500">
-                    Tsh.{discountedPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                <div className="flex items-baseline space-x-2">
+                  <span className="text-neutral-500 line-through">
+                    Tsh.{product.price.toFixed(2)}
                   </span>
-                  <span className="line-through text-sm ml-2 text-neutral-400">
-                    Tsh.{product.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  <span className="text-accent-600 font-semibold">
+                    Tsh.{discountedPrice.toFixed(2)}
                   </span>
-                </>
+                </div>
               ) : (
-                <>Tsh.{product.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}</>
+                <p className="text-2xl text-accent-600 font-semibold">
+                  Tsh.{product.price.toFixed(2)}
+                </p>
               )}
             </div>
-            <p className={`text-sm ${product.stock > 0 ? 'text-green-600' : 'text-red-500'}`}>
-              {product.stock > 0 ? `In Stock (${product.stock})` : 'Out of Stock'}
-            </p>
-            <div className="flex items-center space-x-4">
-              <span className="text-neutral-500 text-sm">
+
+            {/* Category & Rating */}
+            <div className="mt-2 flex items-center space-x-4">
+              <span className="text-sm text-neutral-500">
                 Category: {product.category?.name || 'Uncategorized'}
               </span>
-              <span className="text-sm flex items-center text-yellow-500">
-                <FaStar className="mr-1" /> {product.avgRating?.toFixed(1) || 0}
-                <span className="text-neutral-400 ml-1">({product.totalReviews || 0})</span>
+              <span className="text-sm text-yellow-500 flex items-center space-x-1">
+                <FaStar className="inline-block" /> {product.avgRating.toFixed(1)}{' '}
+                <span className="text-neutral-500">({product.totalReviews})</span>
               </span>
             </div>
-            <p className="text-neutral-600">{product.description}</p>
-            <button
-              onClick={handleAddToCart}
-              disabled={product.stock < 1}
-              className="px-6 py-3 bg-primary text-white rounded-xl hover:shadow-md transition disabled:opacity-50"
-            >
-              Add to Cart
-            </button>
-          </div>
-        </div>
 
-        {/* --- Star Breakdown --- */}
-        <div className="mt-8">
-          <h2 className="text-lg font-semibold mb-2">Customer Ratings</h2>
-          <div className="space-y-2">
-            {[5, 4, 3, 2, 1].map(star => (
-              <div key={star} className="flex items-center space-x-2">
-                <span className="w-10 text-sm">{star}★</span>
-                <div className="flex-1 bg-neutral-200 h-3 rounded-full overflow-hidden">
-                  <div
-                    className="bg-yellow-400 h-full rounded-full"
-                    style={{ width: `${starPercent(star)}%` }}
-                  />
-                </div>
-                <span className="w-10 text-sm text-right">
-                  {starCounts[star] || 0}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
+            {/* Description */}
+            <p className="mt-4 text-neutral-600">{product.description}</p>
 
-        {/* --- Reviews Section --- */}
-        <div className="mt-8 space-y-4">
-          <h2 className="text-lg font-semibold">Reviews</h2>
-          {loadingReviews ? (
-            <p className="text-sm text-neutral-400">Loading…</p>
-          ) : displayedReviews.length === 0 ? (
-            <p className="text-sm text-neutral-400">No reviews yet.</p>
-          ) : (
-            displayedReviews.map(r => (
-              <div key={r._id} className="bg-neutral-100 p-4 rounded-lg">
-                <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center space-x-2">
-                    {[...Array(r.rating)].map((_, i) => (
-                      <FaStar key={i} className="text-yellow-400 text-sm" />
-                    ))}
-                    <span className="text-sm text-neutral-500">| {r.user?.name}</span>
-                  </div>
-                  {r.isVerified && (
-                    <span className="text-green-600 text-sm flex items-center gap-1">
-                      <HiCheckCircle className="text-lg" />
-                      Verified
-                    </span>
-                  )}
-                </div>
-                <p className="text-sm text-neutral-700">{r.comment}</p>
-                <p className="text-xs text-neutral-400 mt-1">
-                  {new Date(r.createdAt).toLocaleDateString()}
-                </p>
-              </div>
-            ))
-          )}
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex justify-center space-x-2 mt-2">
-              {[...Array(totalPages)].map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => goToPage(i + 1)}
-                  className={`w-8 h-8 rounded-full text-sm ${
-                    currentPage === i + 1
-                      ? 'bg-primary text-white'
-                      : 'bg-neutral-200 text-neutral-600'
-                  }`}
-                >
-                  {i + 1}
-                </button>
-              ))}
-            </div>
-          )}
-          {/* Review Submission */}
-          {user ? (
-            <form onSubmit={submitReview} className="mt-10 space-y-4">
-              <h3 className="text-lg font-semibold">Leave a Review</h3>
-              <div className="flex space-x-2">
-                {[1, 2, 3, 4, 5].map((s) => (
+            {/* Stock & Add to Cart */}
+            <div className="mt-6 flex items-center space-x-4">
+              {product.stock > 0 ? (
+                <>
+                  <span className="text-sm text-green-700">
+                    In Stock ({product.stock})
+                  </span>
                   <button
-                    key={s}
-                    type="button"
-                    onClick={() => setNewRating(s)}
-                    className={`text-2xl ${
-                      newRating >= s ? 'text-yellow-400' : 'text-neutral-300'
-                    }`}
+                    onClick={handleAddToCart}
+                    className="px-6 py-2 bg-primary-600 text-white rounded-2xl hover:bg-primary-700 transition-colors"
                   >
-                    ★
+                    Add to Cart
                   </button>
-                ))}
-              </div>
-              <textarea
-                value={newComment}
-                onChange={e => setNewComment(e.target.value)}
-                className="w-full p-3 border border-neutral-300 rounded-lg resize-none"
-                rows={3}
-                placeholder="Write your review here..."
-              />
-              <button
-                type="submit"
-                disabled={submittingReview}
-                className="px-6 py-3 bg-primary text-white rounded-xl hover:shadow-md transition disabled:opacity-50"
-              >
-                {submittingReview ? 'Submitting…' : 'Submit Review'}
-              </button>
-            </form>
-          ) : (
-            <div className="text-center text-sm mt-10 text-neutral-500">
-              <p>
-                Please <Link to="/login" className="text-primary underline">log in</Link> to write a review.
-              </p>
+                </>
+              ) : (
+                <span className="text-sm text-red-700">Out of Stock</span>
+              )}
             </div>
+          </div>
+        </div>
+
+        {/* Review Section */}
+        <div className="space-y-4">
+          <h3 className="text-2xl font-semibold text-neutral-800">Customer Reviews</h3>
+
+          {/* Loading indicator */}
+          {loadingReviews ? (
+            <p className="text-neutral-500">Loading reviews…</p>
+          ) : (
+            <>
+              {/* Review List */}
+              {reviews.length === 0 ? (
+                <p className="text-neutral-500">No reviews yet. Be the first!</p>
+              ) : (
+                <ul className="space-y-4">
+                  {displayedReviews.map((rev) => (
+                    <li key={rev._id} className="border-b border-neutral-200 pb-4">
+                      <div className="flex items-center space-x-2">
+                        <span className="font-medium text-neutral-800">
+                          {rev.user?.name || 'Anonymous'}
+                        </span>
+                        <span className="flex items-center text-yellow-500 space-x-1">
+                          {[...Array(5)].map((_, i) => (
+                            <FaStar
+                              key={i}
+                              className={
+                                i < rev.rating
+                                  ? 'inline-block'
+                                  : 'inline-block text-neutral-300'
+                              }
+                            />
+                          ))}
+                          <span className="text-neutral-500 text-sm">
+                            {rev.rating}/5
+                          </span>
+                        </span>
+                      </div>
+                      {rev.comment && (
+                        <p className="mt-1 text-neutral-600">{rev.comment}</p>
+                      )}
+                      <p className="mt-1 text-xs text-neutral-400">
+                        {new Date(rev.createdAt).toLocaleDateString()}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {/* Pagination Controls if more than REVIEWS_PER_PAGE */}
+              {reviews.length > REVIEWS_PER_PAGE && (
+                <div className="flex justify-center items-center space-x-2 mt-4">
+                  <button
+                    onClick={() => goToPage(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1 rounded-2xl bg-neutral-200 hover:bg-neutral-300 disabled:opacity-50"
+                  >
+                    Previous
+                  </button>
+                  <span className="text-neutral-700">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <button
+                    onClick={() => goToPage(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1 rounded-2xl bg-neutral-200 hover:bg-neutral-300 disabled:opacity-50"
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+
+              {/* Submit New Review */}
+              <div className="pt-6 border-t border-neutral-200">
+                <h4 className="text-xl font-semibold text-neutral-800 mb-2">
+                  Leave a Review
+                </h4>
+                <form onSubmit={submitReview} className="space-y-4">
+                  <div className="flex items-center">
+                    <label className="mr-2 text-sm font-medium text-neutral-700">
+                      Your Rating:
+                    </label>
+                    <div className="flex space-x-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <FaStar
+                          key={star}
+                          onClick={() => setNewRating(star)}
+                          className={
+                            star <= newRating
+                              ? 'text-yellow-500 cursor-pointer'
+                              : 'text-neutral-300 cursor-pointer'
+                          }
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="comment"
+                      className="block text-sm font-medium text-neutral-700"
+                    >
+                      Your Comment
+                    </label>
+                    <textarea
+                      id="comment"
+                      rows="3"
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      required
+                      className="mt-1 block w-full px-3 py-2 border border-neutral-300 rounded-2xl bg-neutral-50 shadow-inner focus:outline-none focus:ring-2 focus:ring-primary-300"
+                      placeholder="Write your thoughts…"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={submittingReview}
+                    className="px-6 py-2 bg-accent-600 text-white rounded-2xl hover:bg-accent-700 transition-colors"
+                  >
+                    {submittingReview ? 'Submitting…' : 'Submit Review'}
+                  </button>
+                </form>
+              </div>
+            </>
           )}
         </div>
       </motion.div>
 
-      {/* --- Auth Modal --- */}
+      {/* “Please log in or sign up” Modal */}
       <AnimatePresence>
         {showAuthModal && (
           <motion.div
+            key="auth-modal-overlay"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-center items-center z-50"
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
           >
-            <div className="bg-white p-6 rounded-xl shadow-lg max-w-sm w-full text-center">
-              <p className="text-lg font-semibold mb-4">Please log in to continue</p>
-              <div className="flex justify-around space-x-4">
-                <Link to="/login" className="text-primary underline">Login</Link>
-                <Link to="/signup" className="text-primary underline">Sign Up</Link>
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="bg-white rounded-2xl p-6 w-80 text-center shadow-lg"
+            >
+              <h3 className="text-xl font-semibold text-neutral-800 mb-4">
+                Please Log In
+              </h3>
+              <p className="text-neutral-600 mb-6">
+                You need to be logged in to add items to your cart.
+              </p>
+              <div className="flex justify-center space-x-4">
+                <Link to="/login">
+                  <button
+                    onClick={() => setShowAuthModal(false)}
+                    className="px-4 py-2 bg-primary-600 text-white rounded-2xl hover:bg-primary-700 transition text-sm"
+                  >
+                    Log In
+                  </button>
+                </Link>
+                <Link to="/signup">
+                  <button
+                    onClick={() => setShowAuthModal(false)}
+                    className="px-4 py-2 bg-accent-600 text-white rounded-2xl hover:bg-accent-700 transition text-sm"
+                  >
+                    Sign Up
+                  </button>
+                </Link>
               </div>
               <button
                 onClick={() => setShowAuthModal(false)}
-                className="mt-6 text-sm text-neutral-500 hover:underline"
+                className="mt-4 text-neutral-500 hover:text-neutral-700 text-sm focus:outline-none"
               >
-                Close
+                Cancel
               </button>
-            </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
