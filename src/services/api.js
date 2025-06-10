@@ -1,11 +1,11 @@
 import axios from 'axios';
 import { toast } from 'react-toastify';
 
-// ✅ Safely use fallback if VITE_API_URL is missing or empty
+// ✅ Use VITE_API_URL or fallback to production backend
 const baseURL =
   import.meta.env.VITE_API_URL?.trim() || 'https://estore-backend-if2a.onrender.com';
 
-console.log('✅ API Base URL:', baseURL); // optional debug log
+console.log('✅ API Base URL:', baseURL);
 
 const api = axios.create({
   baseURL,
@@ -15,10 +15,10 @@ const api = axios.create({
   },
 });
 
-// ❌ REMOVE JWT HEADER ATTACHER (since sessions use cookies only!)
-// No api.interceptors.request for token now
+// ❌ REMOVE JWT HEADER ATTACHER! (Cookie sessions only.)
+// No api.interceptors.request for token needed.
 
-// ✅ Global error handling
+// ✅ Global error handling for all API calls
 api.interceptors.response.use(
   (response) => response,
   (error) => {
