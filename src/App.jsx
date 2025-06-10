@@ -1,7 +1,6 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import Layout from './components/Layout';
-
 import Home from './pages/Home';
 import Products from './pages/Products';
 import ProductDetails from './pages/ProductDetails';
@@ -12,7 +11,6 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import ForgotPassword from './pages/ForgotPassword';
 import OAuth from './pages/OAuth';
-
 import AdminDashboard from './pages/AdminDashboard';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminProducts from './pages/admin/AdminProducts';
@@ -20,31 +18,69 @@ import AdminCategories from './pages/admin/AdminCategories';
 import AdminOrders from './pages/admin/AdminOrders';
 import AdminAnalyticsCharts from './pages/admin/AdminAnalyticsCharts';
 import AdminReviews from './pages/admin/AdminReviews';
-
 import { ToastContainer } from 'react-toastify';
 import useAuthStore from './store/useAuthStore';
 
-// Redirect logged-in admin users away from public routes
+// 1️⃣ Redirect logged-in admin users away from public routes
 function RedirectIfAdmin({ children }) {
   const user = useAuthStore((s) => s.user);
+  const navigate = useNavigate();
   React.useEffect(() => {
     if (user?.isAdmin) {
-      window.location.replace('/admin/users');
+      navigate('/admin/users', { replace: true });
     }
-  }, [user]);
+  }, [user, navigate]);
   return children;
 }
 
-// Protect user-only routes
+// 2️⃣ Protect user-only routes
 function RequireAuth({ children }) {
   const user = useAuthStore((s) => s.user);
+  const hydrated = useAuthStore((s) => s.hydrated);
+  const fetchUser = useAuthStore((s) => s.fetchUser);
+
+  // Fetch user on hydration if not set
+  React.useEffect(() => {
+    if (hydrated && !user) {
+      fetchUser();
+    }
+  }, [hydrated, user, fetchUser]);
+
+  if (!hydrated) {
+    // You can style this however you want, or use a spinner!
+    return (
+      <div className="h-screen flex items-center justify-center text-lg text-neutral-500">
+        Checking session...
+      </div>
+    );
+  }
   if (!user) {
     return <Navigate to="/login" replace />;
   }
   return children;
 }
 
+// 3️⃣ App entry
 export default function App() {
+  // Fetch user session on startup for public pages as well (optional, more seamless)
+  const hydrated = useAuthStore((s) => s.hydrated);
+  const user = useAuthStore((s) => s.user);
+  const fetchUser = useAuthStore((s) => s.fetchUser);
+
+  React.useEffect(() => {
+    if (hydrated && !user) {
+      fetchUser();
+    }
+  }, [hydrated, user, fetchUser]);
+
+  if (!hydrated) {
+    return (
+      <div className="h-screen flex items-center justify-center text-lg text-neutral-500">
+        Checking session...
+      </div>
+    );
+  }
+
   return (
     <>
       <Routes>
@@ -88,7 +124,6 @@ export default function App() {
               </RedirectIfAdmin>
             }
           />
-
           <Route
             path="/cart"
             element={
@@ -109,7 +144,6 @@ export default function App() {
               </RequireAuth>
             }
           />
-
           <Route
             path="/login"
             element={
@@ -144,8 +178,6 @@ export default function App() {
               </RequireAuth>
             }
           />
-
-          {/* Catch-all for unknown public routes */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
