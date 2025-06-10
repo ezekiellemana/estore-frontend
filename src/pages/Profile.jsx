@@ -1,5 +1,3 @@
-// src/pages/Profile.jsx
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../store/useAuthStore';
@@ -7,6 +5,7 @@ import api from '../services/api';
 import { toast } from 'react-toastify';
 import { motion } from 'framer-motion';
 
+// Confirmation modal for deleting orders
 function ConfirmModal({ visible, message, onConfirm, onCancel }) {
   if (!visible) return null;
   return (
@@ -36,12 +35,24 @@ function ConfirmModal({ visible, message, onConfirm, onCancel }) {
   );
 }
 
+// Helper for fetching profile & updating Zustand
+async function fetchUserProfile() {
+  try {
+    const { data } = await api.get('/api/users/profile', { withCredentials: true });
+    useAuthStore.getState().setUser(data);
+    return data;
+  } catch (e) {
+    useAuthStore.getState().setUser(null);
+    throw e;
+  }
+}
+
 export default function Profile() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
-  const fetchUser = useAuthStore((s) => s.fetchUser);
+  const setUser = useAuthStore((s) => s.setUser);
 
-  // User info state
+  // Profile info
   const [userInfo, setUserInfo] = useState({
     name: '',
     email: '',
@@ -50,7 +61,7 @@ export default function Profile() {
   const [loadingUser, setLoadingUser] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
 
-  // Password change
+  // Password form
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
     newPassword: '',
@@ -64,16 +75,16 @@ export default function Profile() {
   const [orderToDelete, setOrderToDelete] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
 
-  // Load user/profile on mount (session aware)
+  // On mount: Load profile & orders
   useEffect(() => {
-    async function loadUserAndOrders() {
+    async function loadAll() {
       setLoadingUser(true);
       try {
-        if (!user) {
-          await fetchUser();
+        // If not in Zustand, fetch profile (cookie/session-aware)
+        let currUser = user;
+        if (!currUser) {
+          currUser = await fetchUserProfile();
         }
-        // After fetchUser, Zustand store will have user
-        const currUser = useAuthStore.getState().user;
         if (!currUser) throw new Error('No session/user found');
         setUserInfo({
           name: currUser.name || '',
@@ -93,7 +104,7 @@ export default function Profile() {
       }
       fetchOrders();
     }
-    loadUserAndOrders();
+    loadAll();
     // eslint-disable-next-line
   }, []);
 
@@ -111,7 +122,7 @@ export default function Profile() {
     }
   };
 
-  // Profile field change
+  // Handle form changes
   const handleProfileChange = (e) => {
     const { name, value } = e.target;
     if (name.startsWith('address.')) {
@@ -125,7 +136,7 @@ export default function Profile() {
     }
   };
 
-  // Save profile
+  // Save profile handler
   const handleProfileSubmit = async (e) => {
     e.preventDefault();
     setSavingProfile(true);
@@ -136,8 +147,9 @@ export default function Profile() {
         address: userInfo.address,
       });
       toast.success('Profile updated successfully.');
-      // Re-fetch user to update Zustand
-      await fetchUser();
+      // Re-fetch updated user profile
+      const updatedUser = await fetchUserProfile();
+      setUser(updatedUser);
     } catch (err) {
       console.error('Failed to update profile:', err);
       const msg =
@@ -150,13 +162,13 @@ export default function Profile() {
     }
   };
 
-  // Password field change
+  // Password input
   const handlePasswordChange = (e) => {
     const { name, value } = e.target;
     setPasswordForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Change password
+  // Change password handler
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
@@ -352,10 +364,9 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* My Orders in full width */}
+      {/* My Orders */}
       <div className="bg-white rounded-2xl shadow-card p-6">
         <h2 className="text-2xl font-bold text-neutral-800 mb-4">My Orders</h2>
-
         {loadingOrders ? (
           <p className="text-neutral-500">Loading orders…</p>
         ) : orders.length === 0 ? (
