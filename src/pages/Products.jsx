@@ -1,10 +1,30 @@
-// src/pages/Products.jsx
-
 import React, { useEffect, useState, useRef } from 'react';
 import api from '../services/api';
 import ProductCard from '../components/ProductCard';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaSearch, FaFilter } from 'react-icons/fa';
+
+// Loading skeleton for product grid
+function ProductGridSkeleton({ count = 12 }) {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+      {Array(count)
+        .fill(0)
+        .map((_, i) => (
+          <div
+            key={i}
+            className="bg-white rounded-2xl shadow-lg p-4 animate-pulse flex flex-col h-full"
+          >
+            <div className="w-full h-48 bg-neutral-200 rounded-lg" />
+            <div className="h-5 bg-neutral-200 rounded mt-4 w-2/3" />
+            <div className="h-4 bg-neutral-100 rounded mt-2 w-1/3" />
+            <div className="h-4 bg-neutral-100 rounded mt-2 w-1/2" />
+            <div className="mt-auto pt-4 h-6 bg-neutral-100 rounded w-1/3" />
+          </div>
+        ))}
+    </div>
+  );
+}
 
 export default function Products() {
   // Product list and pagination
@@ -14,6 +34,7 @@ export default function Products() {
   const [loading, setLoading] = useState(true);
 
   // Filter & sort state
+  const [searchInput, setSearchInput] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryOptions, setCategoryOptions] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('');
@@ -33,20 +54,18 @@ export default function Products() {
   useEffect(() => {
     if (didFetchCategories.current) return;
     didFetchCategories.current = true;
-
     const fetchCategories = async () => {
       try {
         const { data } = await api.get('/api/categories');
         setCategoryOptions(Array.isArray(data) ? data : []);
       } catch (err) {
-        console.error('Failed to load categories:', err);
+        setCategoryOptions([]);
       }
     };
-
     fetchCategories();
   }, []);
 
-  // Fetch products whenever any filter/sort/page changes
+  // Fetch products whenever any filter/sort/page/searchTerm changes
   useEffect(() => {
     const fetchProducts = async () => {
       setLoading(true);
@@ -62,32 +81,31 @@ export default function Products() {
         if (maxPrice) params.maxPrice = parseFloat(maxPrice);
         if (discountedOnly) params.discounted = true;
         if (inStockOnly) params.inStock = true;
-
         const { data } = await api.get('/api/products', { params });
         setProducts(Array.isArray(data.products) ? data.products : []);
         setPages(data.totalPages || 1);
       } catch (err) {
-        console.error('Failed to fetch products:', err);
+        setProducts([]);
+        setPages(1);
       } finally {
         setLoading(false);
       }
     };
-
     fetchProducts();
   }, [page, searchTerm, selectedCategory, minPrice, maxPrice, discountedOnly, inStockOnly, sortBy]);
 
-  // Handle search input (trigger on Enter)
+  // Handle search input (controlled input)
   const handleSearchKeyPress = (e) => {
     if (e.key === 'Enter') {
       setPage(1);
-      setSearchTerm(e.target.value);
+      setSearchTerm(searchInput);
     }
   };
 
-  // Apply filters button
   const applyFilters = () => {
     setPage(1);
-    // Query will refresh automatically via useEffect
+    setSearchTerm(searchInput);
+    setShowFilters(false); // auto-close filters on mobile for better UX
   };
 
   return (
@@ -96,14 +114,17 @@ export default function Products() {
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
         <h2 className="text-2xl font-bold text-neutral-800">All Products</h2>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 w-full lg:w-auto">
           {/* Search Input */}
-          <div className="relative w-full lg:w-1/3">
+          <div className="relative w-full lg:w-72">
             <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400" />
             <input
               type="text"
-              placeholder="Search products..."
-              onKeyPress={handleSearchKeyPress}
+              placeholder="Search products…"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onKeyDown={handleSearchKeyPress}
+              aria-label="Search products"
               className="w-full pl-10 pr-4 py-2 border border-neutral-300 rounded-2xl bg-neutral-50 shadow-inner focus:outline-none focus:ring-2 focus:ring-primary-300"
             />
           </div>
@@ -251,9 +272,7 @@ export default function Products() {
 
       {/* Product Grid */}
       {loading ? (
-        <div className="flex justify-center items-center h-48">
-          <p className="text-neutral-500">Loading products…</p>
-        </div>
+        <ProductGridSkeleton count={12} />
       ) : products.length === 0 ? (
         <p className="text-center text-neutral-500">No products found.</p>
       ) : (
