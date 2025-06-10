@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import api from '../services/api';
 import useAuthStore from '../store/useAuthStore';
 import { motion } from 'framer-motion';
 import AnimatedButton from '../components/AnimatedButton';
@@ -12,30 +13,37 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  // Zustand store
-  const login = useAuthStore((s) => s.login);
-  const user = useAuthStore((s) => s.user);
-  const loading = useAuthStore((s) => s.loading);
-
+  const setUser = useAuthStore((s) => s.setUser);
   const navigate = useNavigate();
 
   const submitHandler = async (e) => {
     e.preventDefault();
-    await login(email, password);
+    setLoading(true);
 
-    // Check if user is set
-    const newUser = useAuthStore.getState().user;
-    if (newUser) {
-      if (newUser.isAdmin) {
-        toast.success(`Welcome Admin, ${newUser.name}!`);
+    try {
+      // No need to manage tokens now; cookies/sessions are handled by the backend!
+      await api.post('/api/users/login', { email, password }); // Will set cookie if login succeeds
+
+      // Get user info using the session cookie
+      const { data: userData } = await api.get('/api/users/profile');
+      setUser(userData);
+
+      if (userData.isAdmin) {
+        toast.success(`Welcome Admin, ${userData.name}!`);
         navigate('/admin');
       } else {
-        toast.success(`Welcome back, ${newUser.name}!`);
+        toast.success(`Welcome back, ${userData.name}!`);
         navigate('/profile');
       }
-    } else {
-      toast.error('Login failed. Please check your email and password.');
+    } catch (err) {
+      console.error(err);
+      toast.error(
+        err.response?.data?.error || 'Login failed. Check email/password.'
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
