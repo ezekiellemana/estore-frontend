@@ -1,3 +1,5 @@
+// src/store/useAuthStore.js
+
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
@@ -7,16 +9,16 @@ const useAuthStore = create(
       user: null,
       setUser: (userData) => set({ user: userData }),
       logout: async () => {
-        // Clear user state
         set({ user: null });
-        // Make sure backend session is killed too
         try {
-          await fetch(`${import.meta.env.VITE_API_URL || ''}/api/users/logout`, {
+          // Use dynamic API URL for all environments
+          const baseURL = import.meta.env.VITE_API_URL?.trim() || '';
+          await fetch(`${baseURL}/api/users/logout`, {
             method: 'POST',
-            credentials: 'include', // This ensures cookie/session is sent
+            credentials: 'include', // Cookie-based session logout
           });
         } catch (e) {
-          // Fail silently, we're logging out either way
+          // Ignore errors on logout (user already removed locally)
         }
       },
     }),
