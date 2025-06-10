@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import api from '../services/api';
 import useAuthStore from '../store/useAuthStore';
 import { motion } from 'framer-motion';
 import AnimatedButton from '../components/AnimatedButton';
@@ -13,36 +12,30 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
 
-  const setToken = useAuthStore((s) => s.setToken);
-  const setUser = useAuthStore((s) => s.setUser);
+  // Zustand store
+  const login = useAuthStore((s) => s.login);
+  const user = useAuthStore((s) => s.user);
+  const loading = useAuthStore((s) => s.loading);
+
   const navigate = useNavigate();
 
   const submitHandler = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    await login(email, password);
 
-    try {
-      const { data } = await api.post('/api/users/login', { email, password });
-      const { token } = data;
-      setToken(token);
-
-      const { data: userData } = await api.get('/api/users/profile');
-      setUser(userData);
-
-      if (userData.isAdmin) {
-        toast.success(`Welcome Admin, ${userData.name}!`);
+    // Check if user is set
+    const newUser = useAuthStore.getState().user;
+    if (newUser) {
+      if (newUser.isAdmin) {
+        toast.success(`Welcome Admin, ${newUser.name}!`);
         navigate('/admin');
       } else {
-        toast.success(`Welcome back, ${userData.name}!`);
+        toast.success(`Welcome back, ${newUser.name}!`);
         navigate('/profile');
       }
-    } catch (err) {
-      console.error(err);
-      toast.error(err.response?.data?.error || 'Login failed. Check email/password.');
-    } finally {
-      setLoading(false);
+    } else {
+      toast.error('Login failed. Please check your email and password.');
     }
   };
 

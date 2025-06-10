@@ -1,24 +1,28 @@
-import {create} from 'zustand';
+import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 const useAuthStore = create(
   persist(
     (set) => ({
-      token: null,
       user: null,
-      setToken: (jwt) => {
-        set({ token: jwt });
-        localStorage.setItem('token', jwt);
-      },
       setUser: (userData) => set({ user: userData }),
-      logout: () => {
-        set({ token: null, user: null });
-        localStorage.removeItem('token');
+      logout: async () => {
+        // Clear user state
+        set({ user: null });
+        // Make sure backend session is killed too
+        try {
+          await fetch(`${import.meta.env.VITE_API_URL || ''}/api/users/logout`, {
+            method: 'POST',
+            credentials: 'include', // This ensures cookie/session is sent
+          });
+        } catch (e) {
+          // Fail silently, we're logging out either way
+        }
       },
     }),
     {
       name: 'auth-storage',
-      partialize: (state) => ({ token: state.token, user: state.user }),
+      partialize: (state) => ({ user: state.user }),
     }
   )
 );

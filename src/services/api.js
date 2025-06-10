@@ -9,18 +9,14 @@ console.log('✅ API Base URL:', baseURL); // optional debug log
 
 const api = axios.create({
   baseURL,
-  withCredentials: true, // needed if using cookies/session
+  withCredentials: true, // Always send cookies!
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// ✅ Attach token to every request if logged in
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
+// ❌ REMOVE JWT HEADER ATTACHER (since sessions use cookies only!)
+// No api.interceptors.request for token now
 
 // ✅ Global error handling
 api.interceptors.response.use(
@@ -30,7 +26,10 @@ api.interceptors.response.use(
     const url = error.config?.url || '';
 
     const isAnalytics = url.includes('/api/admin/analytics');
-    const isAuthEndpoint = url.includes('/api/users/login') || url.includes('/api/users/signup');
+    const isAuthEndpoint =
+      url.includes('/api/users/login') ||
+      url.includes('/api/users/register') ||
+      url.includes('/api/users/signup');
 
     if (status === 401 && !isAnalytics && !isAuthEndpoint) {
       toast.error('Authentication required. Please log in.');

@@ -1,6 +1,8 @@
 // src/pages/Profile.jsx
 
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import useAuthStore from '../store/useAuthStore';
 import api from '../services/api';
 import { toast } from 'react-toastify';
 import { motion } from 'framer-motion';
@@ -35,7 +37,11 @@ function ConfirmModal({ visible, message, onConfirm, onCancel }) {
 }
 
 export default function Profile() {
-  // User info
+  const navigate = useNavigate();
+  const user = useAuthStore((s) => s.user);
+  const fetchUser = useAuthStore((s) => s.fetchUser);
+
+  // User info state
   const [userInfo, setUserInfo] = useState({
     name: '',
     email: '',
@@ -44,7 +50,7 @@ export default function Profile() {
   const [loadingUser, setLoadingUser] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
 
-  // Password form
+  // Password change
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
     newPassword: '',
@@ -58,30 +64,40 @@ export default function Profile() {
   const [orderToDelete, setOrderToDelete] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
 
-  // 1) Load user profile
-  const fetchUser = async () => {
-    setLoadingUser(true);
-    try {
-      const { data } = await api.get('/api/users/profile');
-      setUserInfo({
-        name: data.name || '',
-        email: data.email || '',
-        address: {
-          street: data.address?.street || '',
-          city: data.address?.city || '',
-          country: data.address?.country || '',
-          postalCode: data.address?.postalCode || '',
-        },
-      });
-    } catch (err) {
-      console.error('Failed to load profile:', err);
-      toast.error('Could not load your profile.');
-    } finally {
-      setLoadingUser(false);
+  // Load user/profile on mount (session aware)
+  useEffect(() => {
+    async function loadUserAndOrders() {
+      setLoadingUser(true);
+      try {
+        if (!user) {
+          await fetchUser();
+        }
+        // After fetchUser, Zustand store will have user
+        const currUser = useAuthStore.getState().user;
+        if (!currUser) throw new Error('No session/user found');
+        setUserInfo({
+          name: currUser.name || '',
+          email: currUser.email || '',
+          address: {
+            street: currUser.address?.street || '',
+            city: currUser.address?.city || '',
+            country: currUser.address?.country || '',
+            postalCode: currUser.address?.postalCode || '',
+          },
+        });
+      } catch {
+        toast.error('Session expired. Please log in.');
+        navigate('/login');
+      } finally {
+        setLoadingUser(false);
+      }
+      fetchOrders();
     }
-  };
+    loadUserAndOrders();
+    // eslint-disable-next-line
+  }, []);
 
-  // 2) Load user’s orders
+  // Fetch user orders
   const fetchOrders = async () => {
     setLoadingOrders(true);
     try {
@@ -95,12 +111,7 @@ export default function Profile() {
     }
   };
 
-  useEffect(() => {
-    fetchUser();
-    fetchOrders();
-  }, []);
-
-  // 3) Handle changes in the profile form fields
+  // Profile field change
   const handleProfileChange = (e) => {
     const { name, value } = e.target;
     if (name.startsWith('address.')) {
@@ -114,7 +125,7 @@ export default function Profile() {
     }
   };
 
-  // 4) Submit updated profile
+  // Save profile
   const handleProfileSubmit = async (e) => {
     e.preventDefault();
     setSavingProfile(true);
@@ -125,7 +136,8 @@ export default function Profile() {
         address: userInfo.address,
       });
       toast.success('Profile updated successfully.');
-      fetchUser();
+      // Re-fetch user to update Zustand
+      await fetchUser();
     } catch (err) {
       console.error('Failed to update profile:', err);
       const msg =
@@ -138,13 +150,13 @@ export default function Profile() {
     }
   };
 
-  // 5) Handle password form field changes
+  // Password field change
   const handlePasswordChange = (e) => {
     const { name, value } = e.target;
     setPasswordForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  // 6) Submit password change
+  // Change password
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
@@ -171,12 +183,12 @@ export default function Profile() {
     }
   };
 
-  // 7) Prompt delete confirmation
+  // Confirm order delete
   const confirmDeleteOrder = (orderId) => {
     setOrderToDelete(orderId);
   };
 
-  // 8) Handle confirmed delete
+  // Handle confirmed delete
   const handleConfirmDelete = async () => {
     const orderId = orderToDelete;
     setDeletingId(orderId);
@@ -193,7 +205,6 @@ export default function Profile() {
     }
   };
 
-  // 9) Cancel delete
   const handleCancelDelete = () => {
     setOrderToDelete(null);
   };

@@ -1,8 +1,6 @@
-// src/pages/Signup.jsx
-
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import api from '../services/api';
+import useAuthStore from '../store/useAuthStore';
 import { toast } from 'react-toastify';
 import { motion } from 'framer-motion';
 import AnimatedButton from '../components/AnimatedButton';
@@ -17,6 +15,9 @@ export default function Signup() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  // Zustand store actions
+  const fetchUser = useAuthStore((s) => s.fetchUser);
 
   const submitHandler = async (e) => {
     e.preventDefault();
@@ -33,17 +34,20 @@ export default function Signup() {
 
     setLoading(true);
     try {
-      // Use the correct registration endpoint
-      await api.post('/api/users/register', { name, email, password });
-      toast.success('Registration successful! You can now log in.');
-      navigate('/login');
+      await fetch('/api/users/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // Make sure cookie is set!
+        body: JSON.stringify({ name, email, password }),
+      });
+      // Auto-login: fetch user profile (session cookie will be set)
+      await fetchUser();
+
+      toast.success('Account created! You are now logged in.');
+      navigate('/profile');
     } catch (err) {
       console.error('Signup error:', err);
-      const message =
-        err.response?.data?.error ||
-        err.response?.data?.errors?.map((v) => v.msg).join(', ') ||
-        'Registration failed.';
-      toast.error(message);
+      toast.error('Registration failed. Please check your info.');
     } finally {
       setLoading(false);
     }
