@@ -146,8 +146,14 @@ export default function ProductDetails() {
       setReviews(data);
       setCurrentPage(1);
     } catch (err) {
-      console.error('Review failed:', err);
-      toast.error(err.response?.data?.error || 'Failed to submit review.');
+      console.error('Failed to submit review:', err);
+      if (err.response?.status === 401) {
+          setShowAuthModal(true); // Show login/signup modal
+        } else if (err.response?.data?.error) {
+          toast.error(err.response.data.error);
+        } else {
+          toast.error('Failed to submit review.');
+        }
     } finally {
       setSubmittingReview(false);
     }
