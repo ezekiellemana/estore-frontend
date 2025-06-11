@@ -45,7 +45,7 @@ export default function App() {
     }
   }, [hydrated, user, fetchUser]);
 
-  // Idle session: warn 1m before, logout at 10m
+  // Idle session management
   useIdleSession({
     timeout: 10 * 60 * 1000,
     warningTime: 60 * 1000,
@@ -61,7 +61,7 @@ export default function App() {
     },
   });
 
-  // Show loading until auth is initialized
+  // Show loading until auth is ready
   if (!hydrated) {
     return (
       <div className="h-screen flex items-center justify-center text-lg text-neutral-500">
@@ -70,16 +70,14 @@ export default function App() {
     );
   }
 
-  // Protect authenticated routes
+  // Guard for authenticated routes
   function RequireAuth({ children }) {
     const usr = useAuthStore((s) => s.user);
     const hyd = useAuthStore((s) => s.hydrated);
     const fetch = useAuthStore((s) => s.fetchUser);
 
     useEffect(() => {
-      if (hyd && !usr) {
-        fetch();
-      }
+      if (hyd && !usr) fetch();
     }, [hyd, usr, fetch]);
 
     if (!hyd) {
@@ -94,7 +92,7 @@ export default function App() {
 
   return (
     <>
-      {/* Idle-warning modal */}
+      {/* Idle-timeout warning */}
       <IdleWarningModal
         isOpen={showWarning}
         warningDurationSec={60}
@@ -107,21 +105,22 @@ export default function App() {
       />
 
       <Routes>
-        {/* Admin routes: no public navbar/layout */}
+        {/* ===== ADMIN ===== */}
         <Route path="/admin/*" element={<AdminDashboard />}>
+          {/* default /admin → /admin/users */}
+          <Route index element={<Navigate to="users" replace />} />
           <Route path="users" element={<AdminUsers />} />
           <Route path="products" element={<AdminProducts />} />
           <Route path="categories" element={<AdminCategories />} />
           <Route path="orders" element={<AdminOrders />} />
           <Route path="reviews" element={<AdminReviews />} />
           <Route path="analytics/charts" element={<AdminAnalyticsCharts />} />
-          <Route path="*" element={<Navigate to="users" replace />} />
         </Route>
 
-        {/* OAuth callback */}
+        {/* ===== OAUTH CALLBACK ===== */}
         <Route path="/oauth" element={<OAuth />} />
 
-        {/* Public pages with main layout */}
+        {/* ===== PUBLIC SHOP ===== */}
         <Route element={<Layout />}>
           <Route
             path="/"
@@ -167,6 +166,7 @@ export default function App() {
               </RequireAuth>
             }
           />
+
           <Route
             path="/login"
             element={
