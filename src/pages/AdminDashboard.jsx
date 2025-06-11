@@ -12,11 +12,9 @@ import {
   ShoppingCart,
   LogOut,
   Menu as MenuIcon,
+  X as CloseIcon,
 } from 'lucide-react';
 import Breadcrumbs from '../components/Breadcrumbs';
-import { Sheet, SheetTrigger, SheetContent, SheetClose } from '@/components/ui/sheet';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 
 const LINKS = [
   { to: '/admin/users', label: 'Users', icon: <User size={20}/> },
@@ -33,7 +31,7 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // Redirect non-admins to login
+  // redirect if not admin
   useEffect(() => {
     if (user && !user.isAdmin) {
       toast.error('Admin access only.');
@@ -48,106 +46,130 @@ export default function AdminDashboard() {
     navigate('/', { replace: true });
   };
 
-  // Sidebar content reused in drawer & desktop
-  const SidebarContent = () => (
-    <div className="h-full flex flex-col bg-primary-700 text-white">
+  // shared sidebar content
+  const Sidebar = () => (
+    <div className="h-full flex flex-col bg-primary-700 text-white w-64">
       <div className="flex items-center justify-between px-6 py-4 border-b border-primary-800">
         <h1 className="text-xl font-bold">eStore Admin</h1>
-        <SheetClose asChild>
-          <Button variant="ghost" className="md:hidden p-1">
-            <MenuIcon size={20}/>
-          </Button>
-        </SheetClose>
+        {/* close button for mobile */}
+        <button
+          className="md:hidden p-1"
+          onClick={() => setDrawerOpen(false)}
+          aria-label="Close menu"
+        >
+          <CloseIcon size={20}/>
+        </button>
       </div>
-      <ScrollArea className="flex-grow px-4 py-6 space-y-2">
+      <nav className="flex-1 overflow-auto px-4 py-6 space-y-2">
         {LINKS.map(({ to, label, icon }) => (
           <NavLink
             key={to}
             to={to}
             className={({ isActive }) =>
-              `flex items-center px-4 py-3 rounded-lg transition ${
+              `flex items-center px-4 py-2 rounded-lg transition ${
                 isActive ? 'bg-primary-800' : 'hover:bg-primary-600'
               }`
             }
             onClick={() => setDrawerOpen(false)}
           >
             <span className="mr-3">{icon}</span>
-            <span className="text-sm font-medium">{label}</span>
+            <span>{label}</span>
           </NavLink>
         ))}
-      </ScrollArea>
+      </nav>
       <div className="px-6 py-4 border-t border-primary-800 text-sm">
-        Signed in as <span className="font-semibold">{user?.name}</span>
+        Signed in as <strong>{user?.name}</strong>
       </div>
       <div className="px-6 py-4">
-        <Button
-          variant="default"
-          className="w-full flex items-center justify-center"
+        <button
           onClick={handleLogout}
+          className="w-full bg-secondary hover:bg-secondary-600 text-white py-2 rounded-2xl transition"
         >
-          <LogOut size={18} className="mr-2"/> Logout
-        </Button>
+          <LogOut size={18} className="inline-block mr-2"/> Logout
+        </button>
       </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-neutral-50 dark:bg-neutral-900">
-      {/* Mobile drawer toggle */}
-      <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-        <SheetTrigger asChild>
-          <Button
-            variant="ghost"
-            className="fixed top-4 left-4 z-50 md:hidden p-2 bg-primary-600 text-white rounded-full shadow-md"
-          >
-            <MenuIcon size={20}/>
-          </Button>
-        </SheetTrigger>
-        <SheetContent side="left" className="w-64 p-0">
-          <SidebarContent />
-        </SheetContent>
-      </Sheet>
+    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900">
+      {/* Sticky header */}
+      <header className="flex items-center justify-between bg-white dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 px-4 py-3 md:hidden">
+        <button
+          onClick={() => setDrawerOpen(true)}
+          className="p-1 text-primary-600"
+          aria-label="Open menu"
+        >
+          <MenuIcon size={24}/>
+        </button>
+        <h2 className="text-lg font-semibold text-neutral-800 dark:text-neutral-100">
+          Admin Dashboard
+        </h2>
+        <button
+          onClick={handleLogout}
+          className="p-1 text-primary-600"
+          aria-label="Logout"
+        >
+          <LogOut size={24}/>
+        </button>
+      </header>
 
-      {/* Desktop sidebar */}
-      <aside className="hidden md:flex md:w-64 lg:w-72">
-        <SidebarContent />
-      </aside>
-
-      {/* Main panel */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Mobile header */}
-        <header className="md:hidden flex items-center justify-between bg-white dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 px-4 py-3">
-          <h2 className="text-lg font-semibold text-neutral-800 dark:text-neutral-100">
-            Admin Dashboard
-          </h2>
-          <Button variant="ghost" onClick={handleLogout} className="p-1">
-            <LogOut size={20}/>
-          </Button>
-        </header>
-
-        {/* Desktop header with breadcrumbs */}
-        <header className="hidden md:flex items-center justify-between bg-white dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 px-6 py-4">
-          <h2 className="text-2xl font-semibold text-neutral-800 dark:text-neutral-100">
-            Admin Dashboard
-          </h2>
-          <Breadcrumbs />
-        </header>
-
-        {/* Content */}
-        <main className="flex-1 overflow-auto p-4 md:p-6 lg:p-8">
-          <AnimatePresence mode="wait" initial={false}>
+      <div className="flex">
+        {/* Sidebar: mobile drawer + desktop permanent */}
+        <AnimatePresence>
+          {drawerOpen && (
             <motion.div
-              key={window.location.pathname}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.3 }}
-              className="space-y-6"
+              className="fixed inset-0 z-40 flex"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
             >
-              <Outlet />
+              {/* backdrop */}
+              <div
+                className="fixed inset-0 bg-black bg-opacity-50"
+                onClick={() => setDrawerOpen(false)}
+              />
+              <motion.div
+                className="relative"
+                initial={{ x: '-100%' }}
+                animate={{ x: 0 }}
+                exit={{ x: '-100%' }}
+                transition={{ type: 'tween' }}
+              >
+                <Sidebar />
+              </motion.div>
             </motion.div>
-          </AnimatePresence>
-        </main>
+          )}
+        </AnimatePresence>
+
+        <aside className="hidden md:flex">
+          <Sidebar />
+        </aside>
+
+        {/* Main content */}
+        <div className="flex-1 flex flex-col">
+          {/* Desktop header with breadcrumbs */}
+          <header className="hidden md:flex items-center justify-between bg-white dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 px-6 py-4">
+            <h2 className="text-2xl font-semibold text-neutral-800 dark:text-neutral-100">
+              Admin Dashboard
+            </h2>
+            <Breadcrumbs />
+          </header>
+
+          <main className="flex-1 overflow-auto p-4 md:p-6 lg:p-8">
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={window.location.pathname}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Outlet />
+              </motion.div>
+            </AnimatePresence>
+          </main>
+        </div>
       </div>
     </div>
   );
