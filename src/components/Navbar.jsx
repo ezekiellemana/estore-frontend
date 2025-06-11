@@ -27,7 +27,7 @@ export default function Navbar() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
-  // Prevent back nav
+  // Prevent browser back/forward from leaving login page
   useEffect(() => {
     if (!user) return;
     window.history.pushState(null, '', window.location.href);
@@ -67,14 +67,12 @@ export default function Navbar() {
         className="fixed inset-x-0 top-0 z-50 bg-gradient-to-r from-primary-600 to-primary-400 text-white shadow-navbar"
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
-          <Link
-            to="/"
-            className="text-2xl font-extrabold hover:opacity-90 transition"
-          >
+          {/* Logo */}
+          <Link to="/" className="text-2xl font-extrabold hover:opacity-90 transition">
             <span className="text-accent-300">e</span>Store
           </Link>
 
-          {/* Desktop */}
+          {/* Desktop Menu */}
           <div className="hidden md:flex items-center space-x-6">
             <NavLink
               to="/"
@@ -87,6 +85,7 @@ export default function Navbar() {
               Home
             </NavLink>
 
+            {/* Products Dropdown */}
             <div className="relative group">
               <button className="flex items-center px-2 py-1 rounded-md hover:bg-primary-500 transition">
                 Products
@@ -96,11 +95,7 @@ export default function Navbar() {
                   stroke="currentColor"
                   viewBox="0 0 24 24"
                 >
-                  <path
-                    d="M19 9l-7 7-7-7"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                  />
+                  <path d="M19 9l-7 7-7-7" strokeWidth="2" strokeLinecap="round"/>
                 </svg>
               </button>
               <div className="absolute left-0 mt-2 w-48 bg-milk dark:bg-neutral-800 rounded-2xl shadow-dropdown opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto">
@@ -120,13 +115,11 @@ export default function Navbar() {
               to="/cart"
               className={({ isActive }) =>
                 `flex items-center px-2 py-1 rounded-md ${
-                  isActive
-                    ? 'font-semibold underline'
-                    : 'hover:bg-primary-500'
+                  isActive ? 'font-semibold underline' : 'hover:bg-primary-500'
                 }`
               }
             >
-              <ShoppingCart size={18} className="mr-1" /> Cart
+              <ShoppingCart size={18} className="mr-1"/> Cart
               {cartItems.length > 0 && (
                 <span className="ml-1 text-xs bg-accent-300 text-white rounded-full px-2">
                   {cartItems.length}
@@ -134,32 +127,20 @@ export default function Navbar() {
               )}
             </NavLink>
 
-            <button
-              onClick={toggleTheme}
-              className="p-1 rounded-md hover:bg-primary-500 transition"
-            >
-              {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+            <button onClick={toggleTheme} className="p-1 rounded-md hover:bg-primary-500 transition">
+              {theme === 'light' ? <Moon size={18}/> : <Sun size={18}/>}
             </button>
 
             {user ? (
-              <button
-                onClick={handleLogout}
-                className="flex items-center px-2 py-1 rounded-md hover:bg-primary-500 transition"
-              >
-                <LogOut size={18} className="mr-1" /> Logout
+              <button onClick={handleLogout} className="flex items-center px-2 py-1 rounded-md hover:bg-primary-500 transition">
+                <LogOut size={18} className="mr-1"/> Logout
               </button>
             ) : (
               <>
-                <NavLink
-                  to="/login"
-                  className="px-2 py-1 rounded-md hover:bg-primary-500 transition"
-                >
+                <NavLink to="/login" className="px-2 py-1 rounded-md hover:bg-primary-500 transition">
                   Log In
                 </NavLink>
-                <NavLink
-                  to="/signup"
-                  className="px-2 py-1 rounded-md hover:bg-primary-500 transition"
-                >
+                <NavLink to="/signup" className="px-2 py-1 rounded-md hover:bg-primary-500 transition">
                   Sign Up
                 </NavLink>
               </>
@@ -167,11 +148,8 @@ export default function Navbar() {
           </div>
 
           {/* Mobile Toggle */}
-          <button
-            onClick={() => setDrawerOpen((o) => !o)}
-            className="md:hidden p-1 rounded-md hover:bg-primary-500 transition"
-          >
-            {drawerOpen ? <CloseIcon size={24} /> : <MenuIcon size={24} />}
+          <button onClick={() => setDrawerOpen((o) => !o)} className="md:hidden p-1 rounded-md hover:bg-primary-500 transition">
+            {drawerOpen ? <CloseIcon size={24}/> : <MenuIcon size={24}/>}
           </button>
         </div>
 
@@ -246,7 +224,7 @@ export default function Navbar() {
                   </>
                 )}
               </div>
-            </motion.div>
+            </motion.div>  
           )}
         </AnimatePresence>
       </motion.nav>
