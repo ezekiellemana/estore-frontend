@@ -1,5 +1,5 @@
 // src/App.jsx
-import React from 'react';
+import React, { useEffect } from 'react';
 import { ToastContainer } from 'react-toastify';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import Layout from './components/Layout';
@@ -22,10 +22,20 @@ import AdminAnalyticsCharts from './pages/admin/AdminAnalyticsCharts';
 import AdminReviews from './pages/admin/AdminReviews';
 
 import useAuthStore from './store/useAuthStore';
+import useThemeStore from './store/useThemeStore';
 import { useIdleSession } from './hooks/useIdleSession';
 import IdleWarningModal from './components/IdleWarningModal';
 
 export default function App() {
+  // ─── Theme: sync <html> class from localStorage ─────────────────────
+  const theme = useThemeStore((s) => s.theme);
+  const toggleTheme = useThemeStore((s) => s.toggle);
+  useEffect(() => {
+    const stored = localStorage.getItem('theme') || 'light';
+    document.documentElement.classList.toggle('dark', stored === 'dark');
+  }, []);
+
+  // ─── Auth & Session ────────────────────────────────────────────────
   const logout = useAuthStore((s) => s.logout);
   const setSessionExpired = useAuthStore((s) => s.setSessionExpired);
   const hydrated = useAuthStore((s) => s.hydrated);
@@ -34,17 +44,18 @@ export default function App() {
 
   const [showWarning, setShowWarning] = React.useState(false);
 
-  // Fetch session on app load
-  React.useEffect(() => {
-    if (hydrated && !user) fetchUser();
+  // on app load, fetch user if not in store
+  useEffect(() => {
+    if (hydrated && !user) {
+      fetchUser();
+    }
   }, [hydrated, user, fetchUser]);
 
-  // Idle session management: warn 1min before, logout at 10min
+  // idle-session with warning & logout
   useIdleSession({
-    timeout: 10 * 60 * 1000,
-    warningTime: 60 * 1000,
+    timeout: 10 * 60 * 1000,      // 10 min
+    warningTime: 60 * 1000,       // warn 1 min before
     onWarning: () => {
-      // only show if user hasn’t opted out
       if (!useAuthStore.getState().skipIdleWarning) {
         setShowWarning(true);
       }
@@ -56,37 +67,37 @@ export default function App() {
     },
   });
 
+  // loading state while rehydrating auth
   if (!hydrated) {
     return (
-      <div className="h-screen flex items-center justify-center text-lg text-neutral-500">
+      <div className="h-screen flex items-center justify-center text-lg text-neutral-500 dark:text-neutral-400">
         Checking session…
       </div>
     );
   }
 
-  // Redirect admins away from public pages
+  // ─── Route Guards ─────────────────────────────────────────────────
   function RedirectIfAdmin({ children }) {
-    const admin = useAuthStore((s) => s.user?.isAdmin);
-    const navigate = useNavigate();
-    React.useEffect(() => {
-      if (admin) navigate('/admin/users', { replace: true });
-    }, [admin, navigate]);
+    const isAdmin = useAuthStore((s) => s.user?.isAdmin);
+    const nav = useNavigate();
+    useEffect(() => {
+      if (isAdmin) nav('/admin/users', { replace: true });
+    }, [isAdmin, nav]);
     return children;
   }
 
-  // Protect user routes
   function RequireAuth({ children }) {
     const usr = useAuthStore((s) => s.user);
-    const hydratedInner = useAuthStore((s) => s.hydrated);
-    const fetchUserInner = useAuthStore((s) => s.fetchUser);
+    const hyd = useAuthStore((s) => s.hydrated);
+    const fetch = useAuthStore((s) => s.fetchUser);
 
-    React.useEffect(() => {
-      if (hydratedInner && !usr) fetchUserInner();
-    }, [hydratedInner, usr, fetchUserInner]);
+    useEffect(() => {
+      if (hyd && !usr) fetch();
+    }, [hyd, usr, fetch]);
 
-    if (!hydratedInner) {
+    if (!hyd) {
       return (
-        <div className="h-screen flex items-center justify-center text-lg text-neutral-500">
+        <div className="h-screen flex items-center justify-center text-lg text-neutral-500 dark:text-neutral-400">
           Checking session…
         </div>
       );
@@ -96,7 +107,7 @@ export default function App() {
 
   return (
     <>
-      {/* Pre-logout warning modal */}
+      {/* Idle Timeout Warning */}
       <IdleWarningModal
         isOpen={showWarning}
         warningDurationSec={60}
@@ -109,7 +120,7 @@ export default function App() {
       />
 
       <Routes>
-        {/* Admin section */}
+        {/* ========== ADMIN ========== */}
         <Route path="/admin/*" element={<AdminDashboard />}>
           <Route path="users" element={<AdminUsers />} />
           <Route path="products" element={<AdminProducts />} />
@@ -120,10 +131,10 @@ export default function App() {
           <Route path="*" element={<Navigate to="users" replace />} />
         </Route>
 
-        {/* OAuth callback */}
+        {/* ========== OAUTH CALLBACK ========== */}
         <Route path="/oauth" element={<OAuth />} />
 
-        {/* Public shop */}
+        {/* ========== PUBLIC ========== */}
         <Route element={<Layout />}>
           <Route
             path="/"
@@ -207,7 +218,10 @@ export default function App() {
         </Route>
       </Routes>
 
-      <ToastContainer position="bottom-right" />
+      <ToastContainer
+        position="bottom-right"
+        theme={theme === 'dark' ? 'dark' : 'light'}
+      />
     </>
   );
 }

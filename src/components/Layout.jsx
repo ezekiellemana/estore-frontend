@@ -7,6 +7,17 @@ import Footer from './Footer';
 import Banner from './Banner';
 import useAuthStore from '../store/useAuthStore';
 
+const pageVariants = {
+  initial: { opacity: 0, y: 20 },
+  in:      { opacity: 1, y: 0 },
+  out:     { opacity: 0, y: -20 },
+};
+const pageTransition = {
+  type: 'tween',
+  ease: 'anticipate',
+  duration: 0.4,
+};
+
 export default function Layout() {
   const location = useLocation();
   const sessionExpired = useAuthStore((s) => s.sessionExpired);
@@ -25,18 +36,19 @@ export default function Layout() {
         />
       )}
 
-      <div className="flex flex-col min-h-screen bg-neutral-50 text-neutral-800 transition-colors duration-300 ease-in-out">
+      <div className="flex flex-col min-h-screen bg-neutral-50 dark:bg-gray-900 text-neutral-800 dark:text-neutral-200 transition-colors">
         <Navbar />
 
-        {/* ← changed pt-16 → mt-16 here */}
-        <main className="mt-16 flex-grow container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* main offset so it never sits under the fixed navbar */}
+        <main className="mt-16 flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={location.pathname}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3, ease: 'easeInOut' }}
+              variants={pageVariants}
+              initial="initial"
+              animate="in"
+              exit="out"
+              transition={pageTransition}
             >
               <Outlet />
             </motion.div>
