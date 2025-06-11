@@ -38,17 +38,21 @@ export default function App() {
 
   const [showWarning, setShowWarning] = React.useState(false);
 
-  // Fetch session on app load
+  // Fetch session on load
   useEffect(() => {
-    if (hydrated && !user) fetchUser();
+    if (hydrated && !user) {
+      fetchUser();
+    }
   }, [hydrated, user, fetchUser]);
 
-  // Idle session warning & logout
+  // Idle session with warning & logout
   useIdleSession({
-    timeout: 10 * 60 * 1000,
-    warningTime: 60 * 1000,
+    timeout: 10 * 60 * 1000,     // 10m
+    warningTime: 60 * 1000,      // 1m before
     onWarning: () => {
-      if (!useAuthStore.getState().skipIdleWarning) setShowWarning(true);
+      if (!useAuthStore.getState().skipIdleWarning) {
+        setShowWarning(true);
+      }
     },
     onLogout: () => {
       setShowWarning(false);
@@ -57,7 +61,7 @@ export default function App() {
     },
   });
 
-  // Show loading until auth is ready
+  // Show loader until auth is ready
   if (!hydrated) {
     return (
       <div className="h-screen flex items-center justify-center text-lg text-neutral-500">
@@ -66,14 +70,18 @@ export default function App() {
     );
   }
 
-  // Protect user-only pages
+  // Guard for user-only pages
   function RequireAuth({ children }) {
     const usr = useAuthStore((s) => s.user);
     const hyd = useAuthStore((s) => s.hydrated);
     const fetch = useAuthStore((s) => s.fetchUser);
+
     useEffect(() => {
-      if (hyd && !usr) fetch();
+      if (hyd && !usr) {
+        fetch();
+      }
     }, [hyd, usr, fetch]);
+
     if (!hyd) {
       return (
         <div className="h-screen flex items-center justify-center text-lg text-neutral-500">
@@ -86,7 +94,7 @@ export default function App() {
 
   return (
     <>
-      {/* Pre-logout warning modal */}
+      {/* Idle warning modal */}
       <IdleWarningModal
         isOpen={showWarning}
         warningDurationSec={60}
@@ -99,9 +107,9 @@ export default function App() {
       />
 
       <Routes>
-        {/* ==== ADMIN PANEL ==== */}
+        {/* ===== ADMIN PANEL ===== */}
         <Route path="/admin/*" element={<AdminDashboard />}>
-          {/* default /admin shows the Users page */}
+          {/* /admin shows AdminUsers by default, URL stays /admin */}
           <Route index element={<AdminUsers />} />
           <Route path="users" element={<AdminUsers />} />
           <Route path="products" element={<AdminProducts />} />
@@ -111,20 +119,43 @@ export default function App() {
           <Route path="analytics/charts" element={<AdminAnalyticsCharts />} />
         </Route>
 
-        {/* ==== OAUTH CALLBACK ==== */}
+        {/* ===== OAUTH CALLBACK ===== */}
         <Route path="/oauth" element={<OAuth />} />
 
-        {/* ==== PUBLIC SITE ==== */}
+        {/* ===== PUBLIC SITE ===== */}
         <Route element={<Layout />}>
-          <Route path="/" element={<Home />} />
-          <Route path="/products" element={<Products />} />
-          <Route path="/products/:id" element={<ProductDetails />} />
+          <Route
+            path="/"
+            element={
+              <RedirectIfAdmin to="/admin">
+                <Home />
+              </RedirectIfAdmin>
+            }
+          />
+          <Route
+            path="/products"
+            element={
+              <RedirectIfAdmin to="/admin">
+                <Products />
+              </RedirectIfAdmin>
+            }
+          />
+          <Route
+            path="/products/:id"
+            element={
+              <RedirectIfAdmin to="/admin">
+                <ProductDetails />
+              </RedirectIfAdmin>
+            }
+          />
 
           <Route
             path="/cart"
             element={
               <RequireAuth>
-                <Cart />
+                <RedirectIfAdmin to="/admin">
+                  <Cart />
+                </RedirectIfAdmin>
               </RequireAuth>
             }
           />
@@ -132,12 +163,13 @@ export default function App() {
             path="/checkout"
             element={
               <RequireAuth>
-                <Checkout />
+                <RedirectIfAdmin to="/admin">
+                  <Checkout />
+                </RedirectIfAdmin>
               </RequireAuth>
             }
           />
 
-          {/* Admin-level redirect only on auth pages */}
           <Route
             path="/login"
             element={
@@ -167,12 +199,14 @@ export default function App() {
             path="/profile"
             element={
               <RequireAuth>
-                <Profile />
+                <RedirectIfAdmin to="/admin">
+                  <Profile />
+                </RedirectIfAdmin>
               </RequireAuth>
             }
           />
 
-          {/* Catch-all */}
+          {/* catch-all */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

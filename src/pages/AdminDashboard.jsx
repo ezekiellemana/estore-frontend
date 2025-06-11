@@ -1,21 +1,39 @@
 // src/pages/AdminDashboard.jsx
 import React, { useEffect, useState } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import useAuthStore from '../store/useAuthStore';
-import { toast } from 'react-toastify';
-import AdminLayout from '../components/AdminLayout';
-import Breadcrumbs from '../components/Breadcrumbs';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu as MenuIcon } from 'lucide-react';
-import { Sheet, SheetTrigger, SheetContent } from '@/components/ui/sheet';
+import { toast } from 'react-toastify';
+import {
+  User,
+  FilePlus,
+  BarChart2,
+  Tag,
+  ShoppingCart,
+  LogOut,
+  Menu as MenuIcon,
+} from 'lucide-react';
+import Breadcrumbs from '../components/Breadcrumbs';
+import { Sheet, SheetTrigger, SheetContent, SheetClose } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+
+const LINKS = [
+  { to: '/admin/users', label: 'Users', icon: <User size={20}/> },
+  { to: '/admin/products', label: 'Products', icon: <FilePlus size={20}/> },
+  { to: '/admin/categories', label: 'Categories', icon: <Tag size={20}/> },
+  { to: '/admin/orders', label: 'Orders', icon: <ShoppingCart size={20}/> },
+  { to: '/admin/reviews', label: 'Reviews', icon: <FilePlus size={20}/> },
+  { to: '/admin/analytics/charts', label: 'Analytics', icon: <BarChart2 size={20}/> },
+];
 
 export default function AdminDashboard() {
   const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
   const navigate = useNavigate();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // redirect non-admins
+  // Redirect non-admins
   useEffect(() => {
     if (user && !user.isAdmin) {
       toast.error('Admin access only.');
@@ -25,30 +43,94 @@ export default function AdminDashboard() {
     }
   }, [user, navigate]);
 
+  const handleLogout = () => {
+    logout();
+    navigate('/', { replace: true });
+  };
+
+  // Sidebar content
+  const SidebarContent = () => (
+    <div className="h-full flex flex-col bg-primary-700 text-white shadow-lg">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-primary-800">
+        <h1 className="text-2xl font-bold">eStore Admin</h1>
+        <SheetClose asChild>
+          <Button variant="ghost" className="md:hidden p-2">
+            <MenuIcon size={20} />
+          </Button>
+        </SheetClose>
+      </div>
+      <ScrollArea className="flex-grow px-4 py-6 space-y-2">
+        {LINKS.map(({ to, label, icon }) => (
+          <NavLink
+            key={to}
+            to={to}
+            className={({ isActive }) =>
+              `group flex items-center px-4 py-3 rounded-lg transition ${
+                isActive ? 'bg-primary-800' : 'hover:bg-primary-600'
+              }`
+            }
+          >
+            <span className="mr-3">{icon}</span>
+            <span className="text-sm font-medium">{label}</span>
+          </NavLink>
+        ))}
+      </ScrollArea>
+      <div className="px-6 py-4 border-t border-primary-800 text-sm">
+        Signed in as <span className="font-semibold">{user?.name}</span>
+      </div>
+      <div className="px-6 py-4">
+        <Button
+          variant="default"
+          className="w-full flex items-center justify-center"
+          onClick={handleLogout}
+        >
+          <LogOut size={18} className="mr-2" /> Logout
+        </Button>
+      </div>
+    </div>
+  );
+
   return (
-    <AdminLayout>
-      {/* mobile menu button */}
-      <header className="md:hidden flex items-center justify-between bg-white dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 px-4 py-3">
-        <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-          <SheetTrigger asChild>
-            <Button variant="ghost" onClick={() => setDrawerOpen(true)}>
-              <MenuIcon size={20} />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="w-64 p-0">
-            <AdminSidebar />
-          </SheetContent>
-        </Sheet>
-        <h2 className="text-lg font-semibold">Admin Dashboard</h2>
-      </header>
+    <div className="min-h-screen flex bg-neutral-50 dark:bg-neutral-900">
+      {/* Mobile drawer */}
+      <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
+        <SheetTrigger asChild>
+          <Button
+            variant="ghost"
+            className="fixed top-4 left-4 z-50 md:hidden p-2 bg-primary-600 text-white rounded-full shadow-md"
+          >
+            <MenuIcon size={20} />
+          </Button>
+        </SheetTrigger>
+        <SheetContent side="left" className="w-64 p-0">
+          <SidebarContent />
+        </SheetContent>
+      </Sheet>
 
-      {/* breadcrumb & page content */}
+      {/* Desktop sidebar */}
+      <div className="hidden md:flex md:w-64 lg:w-72">
+        <SidebarContent />
+      </div>
+
+      {/* Main content */}
       <div className="flex-1 flex flex-col">
-        <div className="bg-white dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 px-6 py-4">
+        {/* Header */}
+        <header className="flex items-center justify-between bg-white dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 px-6 py-4">
+          <div className="flex items-center space-x-4">
+            <SheetTrigger asChild>
+              <Button variant="ghost" className="md:hidden p-2">
+                <MenuIcon size={20} />
+              </Button>
+            </SheetTrigger>
+            <h2 className="text-2xl font-semibold text-neutral-800 dark:text-neutral-100">
+              Admin Dashboard
+            </h2>
+          </div>
           <Breadcrumbs />
-        </div>
+        </header>
 
-        <main className="flex-1 overflow-auto p-4 md:p-6 lg:p-8 bg-neutral-50 dark:bg-neutral-900">
+        {/* Routed content */}
+        <main className="flex-1 overflow-auto p-6 lg:p-8">
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={window.location.pathname}
@@ -56,12 +138,13 @@ export default function AdminDashboard() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.3 }}
+              className="space-y-8"
             >
               <Outlet />
             </motion.div>
           </AnimatePresence>
         </main>
       </div>
-    </AdminLayout>
+    </div>
   );
 }
