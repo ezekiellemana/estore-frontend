@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+// src/pages/Login.jsx
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../services/api';
 import useAuthStore from '../store/useAuthStore';
@@ -16,17 +17,22 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
-
   const setUser = useAuthStore((s) => s.setUser);
   const navigate = useNavigate();
-  const emailRef = useRef(null);
 
-  // Autofocus email input
+  // ─────────────────────────────────────────────────────────────────────
+  // BLOCK BACK/FORWARD WHEN ON LOGIN
   useEffect(() => {
-    emailRef.current?.focus();
+    // push a dummy state so back/forward stay on this page
+    window.history.pushState(null, '', window.location.href);
+    const blockNav = () => {
+      window.history.pushState(null, '', window.location.href);
+    };
+    window.addEventListener('popstate', blockNav);
+    return () => window.removeEventListener('popstate', blockNav);
   }, []);
+  // ─────────────────────────────────────────────────────────────────────
 
-  // Basic client-side validation
   const validate = () => {
     const errs = {};
     if (!/\S+@\S+\.\S+/.test(email)) errs.email = 'Please enter a valid email address.';
@@ -46,18 +52,10 @@ export default function Login() {
     setErrors({});
 
     try {
-      // Login sets secure cookie on backend
       await api.post('/api/users/login', { email, password });
-
-      // Fetch user profile with session cookie
       const { data: userData } = await api.get('/api/users/profile');
       setUser(userData);
-
-      toast.success(
-        userData.isAdmin ? `Welcome Admin, ${userData.name}!` : `Welcome back, ${userData.name}!`
-      );
-
-      // Redirect based on role
+      toast.success(userData.isAdmin ? `Welcome Admin, ${userData.name}!` : `Welcome back, ${userData.name}!`);
       navigate(userData.isAdmin ? '/admin' : '/profile');
     } catch (err) {
       console.error(err);
@@ -83,30 +81,21 @@ export default function Login() {
           <CardHeader>
             <h2 className="text-3xl font-bold text-center text-neutral-800 mb-4">Log In</h2>
           </CardHeader>
-
           <CardContent>
-            {errors.submit && (
-              <p className="text-red-500 text-sm mb-4">{errors.submit}</p>
-            )}
-
+            {errors.submit && <p className="text-red-500 text-sm mb-4">{errors.submit}</p>}
             <form onSubmit={submitHandler} className="space-y-6">
               {/* Email Field */}
               <div>
                 <Label htmlFor="email">Email</Label>
                 <Input
-                  ref={emailRef}
                   id="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  required
                   placeholder="you@example.com"
                 />
-                {errors.email && (
-                  <span className="text-red-500 text-sm">{errors.email}</span>
-                )}
+                {errors.email && <span className="text-red-500 text-sm">{errors.email}</span>}
               </div>
-
               {/* Password Field */}
               <div className="relative">
                 <Label htmlFor="password">Password</Label>
@@ -115,7 +104,6 @@ export default function Login() {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  required
                   placeholder="Your password"
                   className="pr-10"
                 />
@@ -127,27 +115,18 @@ export default function Login() {
                 >
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
-                {errors.password && (
-                  <span className="text-red-500 text-sm">{errors.password}</span>
-                )}
+                {errors.password && <span className="text-red-500 text-sm">{errors.password}</span>}
               </div>
-
               <div className="flex justify-between items-center text-sm">
                 <Link to="/forgot-password" className="text-accent-500 hover:underline">
                   Forgot password?
                 </Link>
               </div>
-
-              <AnimatedButton
-                type="submit"
-                className="w-full"
-                disabled={loading}
-              >
+              <AnimatedButton type="submit" className="w-full" disabled={loading}>
                 {loading ? 'Logging in…' : 'Log In'}
               </AnimatedButton>
             </form>
           </CardContent>
-
           <CardFooter className="text-center pt-4">
             <p className="text-neutral-600 text-sm">
               Don’t have an account?{' '}
