@@ -1,9 +1,11 @@
 // src/App.jsx
 import React, { useEffect } from 'react';
 import { ToastContainer } from 'react-toastify';
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 
 import Layout from './components/Layout';
+import RedirectIfAdmin from './components/RedirectIfAdmin';
+
 import Home from './pages/Home';
 import Products from './pages/Products';
 import ProductDetails from './pages/ProductDetails';
@@ -36,14 +38,14 @@ export default function App() {
 
   const [showWarning, setShowWarning] = React.useState(false);
 
-  // fetch session on start
+  // Fetch session on app load
   useEffect(() => {
     if (hydrated && !user) {
       fetchUser();
     }
   }, [hydrated, user, fetchUser]);
 
-  // idle‐session: warn at 9m, logout at 10m
+  // Idle session: warn 1m before, logout at 10m
   useIdleSession({
     timeout: 10 * 60 * 1000,
     warningTime: 60 * 1000,
@@ -59,6 +61,7 @@ export default function App() {
     },
   });
 
+  // Show loading until auth is initialized
   if (!hydrated) {
     return (
       <div className="h-screen flex items-center justify-center text-lg text-neutral-500">
@@ -67,24 +70,16 @@ export default function App() {
     );
   }
 
-  // redirect non-admins if they hit an admin route
-  function RedirectIfAdmin({ children }) {
-    const isAdmin = useAuthStore((s) => s.user?.isAdmin);
-    const nav = useNavigate();
-    useEffect(() => {
-      if (isAdmin) nav('/admin/users', { replace: true });
-    }, [isAdmin, nav]);
-    return children;
-  }
-
-  // guard for user-only pages
+  // Protect authenticated routes
   function RequireAuth({ children }) {
     const usr = useAuthStore((s) => s.user);
     const hyd = useAuthStore((s) => s.hydrated);
     const fetch = useAuthStore((s) => s.fetchUser);
 
     useEffect(() => {
-      if (hyd && !usr) fetch();
+      if (hyd && !usr) {
+        fetch();
+      }
     }, [hyd, usr, fetch]);
 
     if (!hyd) {
@@ -99,7 +94,7 @@ export default function App() {
 
   return (
     <>
-      {/* Idle-timeout warning */}
+      {/* Idle-warning modal */}
       <IdleWarningModal
         isOpen={showWarning}
         warningDurationSec={60}
@@ -112,7 +107,7 @@ export default function App() {
       />
 
       <Routes>
-        {/* ===== ADMIN ===== */}
+        {/* Admin routes: no public navbar/layout */}
         <Route path="/admin/*" element={<AdminDashboard />}>
           <Route path="users" element={<AdminUsers />} />
           <Route path="products" element={<AdminProducts />} />
@@ -123,10 +118,10 @@ export default function App() {
           <Route path="*" element={<Navigate to="users" replace />} />
         </Route>
 
-        {/* ===== OAUTH CALLBACK ===== */}
+        {/* OAuth callback */}
         <Route path="/oauth" element={<OAuth />} />
 
-        {/* ===== PUBLIC SHOP ===== */}
+        {/* Public pages with main layout */}
         <Route element={<Layout />}>
           <Route
             path="/"
