@@ -1,7 +1,8 @@
 // src/App.jsx
-import React from 'react';
+import React, { useEffect } from 'react';
 import { ToastContainer } from 'react-toastify';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import Products from './pages/Products';
@@ -13,6 +14,7 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import ForgotPassword from './pages/ForgotPassword';
 import OAuth from './pages/OAuth';
+
 import AdminDashboard from './pages/AdminDashboard';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminProducts from './pages/admin/AdminProducts';
@@ -34,17 +36,18 @@ export default function App() {
 
   const [showWarning, setShowWarning] = React.useState(false);
 
-  // Fetch session on app load
-  React.useEffect(() => {
-    if (hydrated && !user) fetchUser();
+  // fetch session on start
+  useEffect(() => {
+    if (hydrated && !user) {
+      fetchUser();
+    }
   }, [hydrated, user, fetchUser]);
 
-  // Idle session management: warn 1min before, logout at 10min
+  // idle‐session: warn at 9m, logout at 10m
   useIdleSession({
     timeout: 10 * 60 * 1000,
     warningTime: 60 * 1000,
     onWarning: () => {
-      // only show if user hasn’t opted out
       if (!useAuthStore.getState().skipIdleWarning) {
         setShowWarning(true);
       }
@@ -64,27 +67,27 @@ export default function App() {
     );
   }
 
-  // Redirect admins away from public pages
+  // redirect non-admins if they hit an admin route
   function RedirectIfAdmin({ children }) {
-    const admin = useAuthStore((s) => s.user?.isAdmin);
-    const navigate = useNavigate();
-    React.useEffect(() => {
-      if (admin) navigate('/admin/users', { replace: true });
-    }, [admin, navigate]);
+    const isAdmin = useAuthStore((s) => s.user?.isAdmin);
+    const nav = useNavigate();
+    useEffect(() => {
+      if (isAdmin) nav('/admin/users', { replace: true });
+    }, [isAdmin, nav]);
     return children;
   }
 
-  // Protect user routes
+  // guard for user-only pages
   function RequireAuth({ children }) {
     const usr = useAuthStore((s) => s.user);
-    const hydratedInner = useAuthStore((s) => s.hydrated);
-    const fetchUserInner = useAuthStore((s) => s.fetchUser);
+    const hyd = useAuthStore((s) => s.hydrated);
+    const fetch = useAuthStore((s) => s.fetchUser);
 
-    React.useEffect(() => {
-      if (hydratedInner && !usr) fetchUserInner();
-    }, [hydratedInner, usr, fetchUserInner]);
+    useEffect(() => {
+      if (hyd && !usr) fetch();
+    }, [hyd, usr, fetch]);
 
-    if (!hydratedInner) {
+    if (!hyd) {
       return (
         <div className="h-screen flex items-center justify-center text-lg text-neutral-500">
           Checking session…
@@ -96,7 +99,7 @@ export default function App() {
 
   return (
     <>
-      {/* Pre-logout warning modal */}
+      {/* Idle-timeout warning */}
       <IdleWarningModal
         isOpen={showWarning}
         warningDurationSec={60}
@@ -109,7 +112,7 @@ export default function App() {
       />
 
       <Routes>
-        {/* Admin section */}
+        {/* ===== ADMIN ===== */}
         <Route path="/admin/*" element={<AdminDashboard />}>
           <Route path="users" element={<AdminUsers />} />
           <Route path="products" element={<AdminProducts />} />
@@ -120,10 +123,10 @@ export default function App() {
           <Route path="*" element={<Navigate to="users" replace />} />
         </Route>
 
-        {/* OAuth callback */}
+        {/* ===== OAUTH CALLBACK ===== */}
         <Route path="/oauth" element={<OAuth />} />
 
-        {/* Public shop */}
+        {/* ===== PUBLIC SHOP ===== */}
         <Route element={<Layout />}>
           <Route
             path="/"
