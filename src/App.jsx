@@ -40,15 +40,13 @@ export default function App() {
 
   // Fetch session on load
   useEffect(() => {
-    if (hydrated && !user) {
-      fetchUser();
-    }
+    if (hydrated && !user) fetchUser();
   }, [hydrated, user, fetchUser]);
 
-  // Idle session with warning & logout
+  // Idle‐session warning & logout
   useIdleSession({
-    timeout: 10 * 60 * 1000,     // 10m
-    warningTime: 60 * 1000,      // 1m before
+    timeout: 10 * 60 * 1000,
+    warningTime: 60 * 1000,
     onWarning: () => {
       if (!useAuthStore.getState().skipIdleWarning) {
         setShowWarning(true);
@@ -64,27 +62,22 @@ export default function App() {
   // Show loader until auth is ready
   if (!hydrated) {
     return (
-      <div className="h-screen flex items-center justify-center text-lg text-neutral-500">
+      <div className="min-h-screen flex items-center justify-center text-lg text-neutral-500">
         Checking session…
       </div>
     );
   }
 
-  // Guard for user-only pages
   function RequireAuth({ children }) {
     const usr = useAuthStore((s) => s.user);
     const hyd = useAuthStore((s) => s.hydrated);
     const fetch = useAuthStore((s) => s.fetchUser);
-
     useEffect(() => {
-      if (hyd && !usr) {
-        fetch();
-      }
+      if (hyd && !usr) fetch();
     }, [hyd, usr, fetch]);
-
     if (!hyd) {
       return (
-        <div className="h-screen flex items-center justify-center text-lg text-neutral-500">
+        <div className="min-h-screen flex items-center justify-center text-lg text-neutral-500">
           Checking session…
         </div>
       );
@@ -93,8 +86,8 @@ export default function App() {
   }
 
   return (
-    <>
-      {/* Idle warning modal */}
+    // Prevent horizontal overflow on mobile
+    <div className="min-h-screen w-full overflow-x-hidden">
       <IdleWarningModal
         isOpen={showWarning}
         warningDurationSec={60}
@@ -109,7 +102,6 @@ export default function App() {
       <Routes>
         {/* ===== ADMIN PANEL ===== */}
         <Route path="/admin/*" element={<AdminDashboard />}>
-          {/* /admin shows AdminUsers by default, URL stays /admin */}
           <Route index element={<AdminUsers />} />
           <Route path="users" element={<AdminUsers />} />
           <Route path="products" element={<AdminProducts />} />
@@ -124,38 +116,15 @@ export default function App() {
 
         {/* ===== PUBLIC SITE ===== */}
         <Route element={<Layout />}>
-          <Route
-            path="/"
-            element={
-              <RedirectIfAdmin to="/admin">
-                <Home />
-              </RedirectIfAdmin>
-            }
-          />
-          <Route
-            path="/products"
-            element={
-              <RedirectIfAdmin to="/admin">
-                <Products />
-              </RedirectIfAdmin>
-            }
-          />
-          <Route
-            path="/products/:id"
-            element={
-              <RedirectIfAdmin to="/admin">
-                <ProductDetails />
-              </RedirectIfAdmin>
-            }
-          />
+          <Route path="/" element={<Home />} />
+          <Route path="/products" element={<Products />} />
+          <Route path="/products/:id" element={<ProductDetails />} />
 
           <Route
             path="/cart"
             element={
               <RequireAuth>
-                <RedirectIfAdmin to="/admin">
-                  <Cart />
-                </RedirectIfAdmin>
+                <Cart />
               </RequireAuth>
             }
           />
@@ -163,9 +132,7 @@ export default function App() {
             path="/checkout"
             element={
               <RequireAuth>
-                <RedirectIfAdmin to="/admin">
-                  <Checkout />
-                </RedirectIfAdmin>
+                <Checkout />
               </RequireAuth>
             }
           />
@@ -194,24 +161,19 @@ export default function App() {
               </RedirectIfAdmin>
             }
           />
-
           <Route
             path="/profile"
             element={
               <RequireAuth>
-                <RedirectIfAdmin to="/admin">
-                  <Profile />
-                </RedirectIfAdmin>
+                <Profile />
               </RequireAuth>
             }
           />
-
-          {/* catch-all */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
 
       <ToastContainer position="bottom-right" />
-    </>
+    </div>
   );
 }
