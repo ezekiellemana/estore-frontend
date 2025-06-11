@@ -1,4 +1,6 @@
+// src/App.jsx
 import React from 'react';
+import { ToastContainer } from 'react-toastify';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import Home from './pages/Home';
@@ -18,73 +20,96 @@ import AdminCategories from './pages/admin/AdminCategories';
 import AdminOrders from './pages/admin/AdminOrders';
 import AdminAnalyticsCharts from './pages/admin/AdminAnalyticsCharts';
 import AdminReviews from './pages/admin/AdminReviews';
-import { ToastContainer } from 'react-toastify';
+
 import useAuthStore from './store/useAuthStore';
+import { useIdleSession } from './hooks/useIdleSession';
+import IdleWarningModal from './components/IdleWarningModal';
 
-// 1️⃣ Redirect logged-in admin users away from public routes
-function RedirectIfAdmin({ children }) {
-  const user = useAuthStore((s) => s.user);
-  const navigate = useNavigate();
-  React.useEffect(() => {
-    if (user?.isAdmin) {
-      navigate('/admin/users', { replace: true });
-    }
-  }, [user, navigate]);
-  return children;
-}
-
-// 2️⃣ Protect user-only routes
-function RequireAuth({ children }) {
-  const user = useAuthStore((s) => s.user);
-  const hydrated = useAuthStore((s) => s.hydrated);
-  const fetchUser = useAuthStore((s) => s.fetchUser);
-
-  // Fetch user on hydration if not set
-  React.useEffect(() => {
-    if (hydrated && !user) {
-      fetchUser();
-    }
-  }, [hydrated, user, fetchUser]);
-
-  if (!hydrated) {
-    // You can style this however you want, or use a spinner!
-    return (
-      <div className="h-screen flex items-center justify-center text-lg text-neutral-500">
-        Checking session...
-      </div>
-    );
-  }
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-  return children;
-}
-
-// 3️⃣ App entry
 export default function App() {
-  // Fetch user session on startup for public pages as well (optional, more seamless)
+  const logout = useAuthStore((s) => s.logout);
+  const setSessionExpired = useAuthStore((s) => s.setSessionExpired);
   const hydrated = useAuthStore((s) => s.hydrated);
   const user = useAuthStore((s) => s.user);
   const fetchUser = useAuthStore((s) => s.fetchUser);
 
+  const [showWarning, setShowWarning] = React.useState(false);
+
+  // Fetch session on app load
   React.useEffect(() => {
-    if (hydrated && !user) {
-      fetchUser();
-    }
+    if (hydrated && !user) fetchUser();
   }, [hydrated, user, fetchUser]);
+
+  // Idle session management: warn 1min before, logout at 10min
+  useIdleSession({
+    timeout: 10 * 60 * 1000,
+    warningTime: 60 * 1000,
+    onWarning: () => {
+      // only show if user hasn’t opted out
+      if (!useAuthStore.getState().skipIdleWarning) {
+        setShowWarning(true);
+      }
+    },
+    onLogout: () => {
+      setShowWarning(false);
+      logout();
+      setSessionExpired(true);
+    },
+  });
 
   if (!hydrated) {
     return (
       <div className="h-screen flex items-center justify-center text-lg text-neutral-500">
-        Checking session...
+        Checking session…
       </div>
     );
+  }
+
+  // Redirect admins away from public pages
+  function RedirectIfAdmin({ children }) {
+    const admin = useAuthStore((s) => s.user?.isAdmin);
+    const navigate = useNavigate();
+    React.useEffect(() => {
+      if (admin) navigate('/admin/users', { replace: true });
+    }, [admin, navigate]);
+    return children;
+  }
+
+  // Protect user routes
+  function RequireAuth({ children }) {
+    const usr = useAuthStore((s) => s.user);
+    const hydratedInner = useAuthStore((s) => s.hydrated);
+    const fetchUserInner = useAuthStore((s) => s.fetchUser);
+
+    React.useEffect(() => {
+      if (hydratedInner && !usr) fetchUserInner();
+    }, [hydratedInner, usr, fetchUserInner]);
+
+    if (!hydratedInner) {
+      return (
+        <div className="h-screen flex items-center justify-center text-lg text-neutral-500">
+          Checking session…
+        </div>
+      );
+    }
+    return usr ? children : <Navigate to="/login" replace />;
   }
 
   return (
     <>
+      {/* Pre-logout warning modal */}
+      <IdleWarningModal
+        isOpen={showWarning}
+        warningDurationSec={60}
+        onStayLoggedIn={() => setShowWarning(false)}
+        onForceLogout={() => {
+          setShowWarning(false);
+          logout();
+          setSessionExpired(true);
+        }}
+      />
+
       <Routes>
-        {/* ========== ADMIN SECTION ========== */}
+        {/* Admin section */}
         <Route path="/admin/*" element={<AdminDashboard />}>
           <Route path="users" element={<AdminUsers />} />
           <Route path="products" element={<AdminProducts />} />
@@ -95,10 +120,10 @@ export default function App() {
           <Route path="*" element={<Navigate to="users" replace />} />
         </Route>
 
-        {/* ========== OAUTH CALLBACK ========== */}
+        {/* OAuth callback */}
         <Route path="/oauth" element={<OAuth />} />
 
-        {/* ========== PUBLIC SHOP SECTION ========== */}
+        {/* Public shop */}
         <Route element={<Layout />}>
           <Route
             path="/"

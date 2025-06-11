@@ -1,14 +1,20 @@
+// src/store/useAuthStore.js
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 const useAuthStore = create(
   persist(
     (set, get) => ({
+      // ── State ───────────────────────────────────────────────────────────
       user: null,
       loading: false,
       error: null,
-      hydrated: false, // <-- so you know when zustand rehydration is done
 
+      hydrated: false,        // rehydration complete flag
+      sessionExpired: false,  // show “logged out” banner
+      skipIdleWarning: false, // suppress pre-logout modal
+
+      // ── Actions ─────────────────────────────────────────────────────────
       setUser: (userData) => set({ user: userData }),
 
       fetchUser: async () => {
@@ -29,7 +35,8 @@ const useAuthStore = create(
       },
 
       logout: async () => {
-        set({ user: null });
+        // clear user + banner flag
+        set({ user: null, sessionExpired: false });
         try {
           const baseURL = import.meta.env.VITE_API_URL?.trim() || '';
           await fetch(`${baseURL}/api/users/logout`, {
@@ -40,13 +47,15 @@ const useAuthStore = create(
           // ignore
         }
       },
+
+      setSessionExpired: (val) => set({ sessionExpired: val }),
+      setSkipIdleWarning: (val) => set({ skipIdleWarning: val }),
     }),
     {
       name: 'auth-storage',
       partialize: (state) => ({ user: state.user }),
       onRehydrateStorage: () => (state) => {
         setTimeout(() => {
-          // Wait for hydration, then mark as hydrated
           state.hydrated = true;
         }, 0);
       },
