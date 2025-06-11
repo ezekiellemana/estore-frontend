@@ -20,18 +20,13 @@ export default function Login() {
   const setUser = useAuthStore((s) => s.setUser);
   const navigate = useNavigate();
 
-  // ─────────────────────────────────────────────────────────────────────
   // BLOCK BACK/FORWARD WHEN ON LOGIN
   useEffect(() => {
-    // push a dummy state so back/forward stay on this page
     window.history.pushState(null, '', window.location.href);
-    const blockNav = () => {
-      window.history.pushState(null, '', window.location.href);
-    };
+    const blockNav = () => window.history.pushState(null, '', window.location.href);
     window.addEventListener('popstate', blockNav);
     return () => window.removeEventListener('popstate', blockNav);
   }, []);
-  // ─────────────────────────────────────────────────────────────────────
 
   const validate = () => {
     const errs = {};
@@ -52,11 +47,21 @@ export default function Login() {
     setErrors({});
 
     try {
+      // Perform login (sets cookie)
       await api.post('/api/users/login', { email, password });
+
+      // Fetch profile
       const { data: userData } = await api.get('/api/users/profile');
       setUser(userData);
-      toast.success(userData.isAdmin ? `Welcome Admin, ${userData.name}!` : `Welcome back, ${userData.name}!`);
-      navigate(userData.isAdmin ? '/admin' : '/profile');
+
+      // Redirect based on role
+      if (userData.isAdmin) {
+        toast.success(`Welcome Admin, ${userData.name}!`);
+        navigate('/admin/users', { replace: true });
+      } else {
+        toast.success(`Welcome back, ${userData.name}!`);
+        navigate('/profile', { replace: true });
+      }
     } catch (err) {
       console.error(err);
       setPassword('');
