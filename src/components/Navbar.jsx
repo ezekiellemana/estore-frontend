@@ -5,7 +5,6 @@ import {
   Menu as MenuIcon,
   X as CloseIcon,
   LogOut,
-  User,
   ShoppingCart,
   Sun,
   Moon,
@@ -27,7 +26,7 @@ export default function Navbar() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
-  // Prevent browser back/forward from leaving login page
+  // Block back nav
   useEffect(() => {
     if (!user) return;
     window.history.pushState(null, '', window.location.href);
@@ -64,21 +63,23 @@ export default function Navbar() {
         initial={{ y: -50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.5 }}
-        className="fixed inset-x-0 top-0 z-50 bg-gradient-to-r from-primary-600 to-primary-400 text-white shadow-navbar"
+        className="fixed inset-x-0 top-0 z-50 bg-gradient-to-r from-primary-700 to-primary-500 text-white shadow-navbar"
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
           {/* Logo */}
-          <Link to="/" className="text-2xl font-extrabold hover:opacity-90 transition">
+          <Link to="/" className="text-2xl font-extrabold hover:opacity-90 transition-colors">
             <span className="text-accent-300">e</span>Store
           </Link>
 
           {/* Desktop Menu */}
-          <div className="hidden md:flex items-center space-x-6">
+          <div className="hidden md:flex items-center space-x-8">
             <NavLink
               to="/"
               className={({ isActive }) =>
-                `px-2 py-1 rounded-md ${
-                  isActive ? 'font-semibold underline' : 'hover:bg-primary-500'
+                `px-3 py-2 rounded-md transition-colors ${
+                  isActive
+                    ? 'bg-accent-300 text-primary-900 font-semibold'
+                    : 'hover:bg-primary-600'
                 }`
               }
             >
@@ -87,7 +88,7 @@ export default function Navbar() {
 
             {/* Products Dropdown */}
             <div className="relative group">
-              <button className="flex items-center px-2 py-1 rounded-md hover:bg-primary-500 transition">
+              <button className="flex items-center px-3 py-2 rounded-md hover:bg-primary-600 transition-colors">
                 Products
                 <svg
                   className="ml-1 w-4 h-4"
@@ -95,15 +96,15 @@ export default function Navbar() {
                   stroke="currentColor"
                   viewBox="0 0 24 24"
                 >
-                  <path d="M19 9l-7 7-7-7" strokeWidth="2" strokeLinecap="round"/>
+                  <path d="M19 9l-7 7-7-7" strokeWidth="2" strokeLinecap="round" />
                 </svg>
               </button>
-              <div className="absolute left-0 mt-2 w-48 bg-milk dark:bg-neutral-800 rounded-2xl shadow-dropdown opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto">
+              <div className="absolute left-0 mt-2 w-48 bg-milk dark:bg-neutral-800 rounded-lg shadow-dropdown opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity">
                 {categories.map((cat) => (
                   <Link
                     key={cat}
                     to={`/products?category=${encodeURIComponent(cat)}`}
-                    className="block px-4 py-2 hover:bg-primary-50 dark:hover:bg-neutral-700 transition"
+                    className="block px-4 py-2 hover:bg-primary-100 dark:hover:bg-neutral-700 transition-colors"
                   >
                     {cat}
                   </Link>
@@ -114,33 +115,48 @@ export default function Navbar() {
             <NavLink
               to="/cart"
               className={({ isActive }) =>
-                `flex items-center px-2 py-1 rounded-md ${
-                  isActive ? 'font-semibold underline' : 'hover:bg-primary-500'
+                `flex items-center px-3 py-2 rounded-md transition-colors ${
+                  isActive
+                    ? 'bg-accent-300 text-primary-900 font-semibold'
+                    : 'hover:bg-primary-600'
                 }`
               }
             >
-              <ShoppingCart size={18} className="mr-1"/> Cart
+              <ShoppingCart size={18} className="mr-1" /> Cart
               {cartItems.length > 0 && (
-                <span className="ml-1 text-xs bg-accent-300 text-white rounded-full px-2">
+                <span className="ml-1 text-xs bg-accent-300 text-primary-900 rounded-full px-2">
                   {cartItems.length}
                 </span>
               )}
             </NavLink>
 
-            <button onClick={toggleTheme} className="p-1 rounded-md hover:bg-primary-500 transition">
-              {theme === 'light' ? <Moon size={18}/> : <Sun size={18}/>}
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-md hover:bg-primary-600 transition-colors"
+              aria-label="Toggle theme"
+            >
+              {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
             </button>
 
             {user ? (
-              <button onClick={handleLogout} className="flex items-center px-2 py-1 rounded-md hover:bg-primary-500 transition">
-                <LogOut size={18} className="mr-1"/> Logout
+              <button
+                onClick={handleLogout}
+                className="flex items-center px-3 py-2 rounded-md hover:bg-primary-600 transition-colors"
+              >
+                <LogOut size={18} className="mr-1" /> Logout
               </button>
             ) : (
               <>
-                <NavLink to="/login" className="px-2 py-1 rounded-md hover:bg-primary-500 transition">
+                <NavLink
+                  to="/login"
+                  className="px-3 py-2 rounded-md hover:bg-primary-600 transition-colors"
+                >
                   Log In
                 </NavLink>
-                <NavLink to="/signup" className="px-2 py-1 rounded-md hover:bg-primary-500 transition">
+                <NavLink
+                  to="/signup"
+                  className="px-3 py-2 rounded-md hover:bg-primary-600 transition-colors"
+                >
                   Sign Up
                 </NavLink>
               </>
@@ -148,8 +164,12 @@ export default function Navbar() {
           </div>
 
           {/* Mobile Toggle */}
-          <button onClick={() => setDrawerOpen((o) => !o)} className="md:hidden p-1 rounded-md hover:bg-primary-500 transition">
-            {drawerOpen ? <CloseIcon size={24}/> : <MenuIcon size={24}/>}
+          <button
+            onClick={() => setDrawerOpen((o) => !o)}
+            className="md:hidden p-2 rounded-md hover:bg-primary-600 transition-colors"
+            aria-label="Toggle menu"
+          >
+            {drawerOpen ? <CloseIcon size={24} /> : <MenuIcon size={24} />}
           </button>
         </div>
 
@@ -157,31 +177,31 @@ export default function Navbar() {
         <AnimatePresence>
           {drawerOpen && (
             <motion.div
-              initial={{ height: 0 }}
-              animate={{ height: 'auto' }}
-              exit={{ height: 0 }}
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.25 }}
               className="md:hidden bg-primary-50 dark:bg-neutral-900 overflow-hidden"
             >
-              <div className="px-4 py-4 space-y-2">
+              <div className="px-4 py-4 space-y-3">
                 <NavLink
                   to="/"
                   onClick={() => setDrawerOpen(false)}
-                  className="block py-2 hover:bg-primary-100 dark:hover:bg-neutral-700 rounded transition"
+                  className="block px-3 py-2 rounded-md hover:bg-primary-100 dark:hover:bg-neutral-700 transition-colors"
                 >
                   Home
                 </NavLink>
                 <details className="group">
-                  <summary className="py-2 hover:bg-primary-100 dark:hover:bg-neutral-700 rounded cursor-pointer transition">
+                  <summary className="px-3 py-2 rounded-md hover:bg-primary-100 dark:hover:bg-neutral-700 cursor-pointer transition-colors">
                     Products
                   </summary>
-                  <div className="pl-4 mt-1 space-y-1">
+                  <div className="pl-4 mt-2 space-y-1">
                     {categories.map((cat) => (
                       <NavLink
                         key={cat}
                         to={`/products?category=${encodeURIComponent(cat)}`}
                         onClick={() => setDrawerOpen(false)}
-                        className="block py-1 hover:bg-primary-100 dark:hover:bg-neutral-700 rounded transition"
+                        className="block px-3 py-1 rounded-md hover:bg-primary-100 dark:hover:bg-neutral-700 transition-colors"
                       >
                         {cat}
                       </NavLink>
@@ -191,7 +211,7 @@ export default function Navbar() {
                 <NavLink
                   to="/cart"
                   onClick={() => setDrawerOpen(false)}
-                  className="block py-2 hover:bg-primary-100 dark:hover:bg-neutral-700 rounded transition"
+                  className="block px-3 py-2 rounded-md hover:bg-primary-100 dark:hover:bg-neutral-700 transition-colors"
                 >
                   Cart
                 </NavLink>
@@ -201,7 +221,7 @@ export default function Navbar() {
                       setDrawerOpen(false);
                       handleLogout();
                     }}
-                    className="w-full text-left py-2 hover:bg-primary-100 dark:hover:bg-neutral-700 rounded transition"
+                    className="w-full text-left px-3 py-2 rounded-md hover:bg-primary-100 dark:hover:bg-neutral-700 transition-colors"
                   >
                     Logout
                   </button>
@@ -210,21 +230,21 @@ export default function Navbar() {
                     <NavLink
                       to="/login"
                       onClick={() => setDrawerOpen(false)}
-                      className="block py-2 hover:bg-primary-100 dark:hover:bg-neutral-700 rounded transition"
+                      className="block px-3 py-2 rounded-md hover:bg-primary-100 dark:hover:bg-neutral-700 transition-colors"
                     >
                       Log In
                     </NavLink>
                     <NavLink
                       to="/signup"
                       onClick={() => setDrawerOpen(false)}
-                      className="block py-2 hover:bg-primary-100 dark:hover:bg-neutral-700 rounded transition"
+                      className="block px-3 py-2 rounded-md hover:bg-primary-100 dark:hover:bg-neutral-700 transition-colors"
                     >
                       Sign Up
                     </NavLink>
                   </>
                 )}
               </div>
-            </motion.div>  
+            </motion.div>
           )}
         </AnimatePresence>
       </motion.nav>
