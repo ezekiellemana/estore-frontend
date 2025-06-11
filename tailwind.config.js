@@ -1,8 +1,8 @@
-// tailwind.config.js
 export const content = [
   "./index.html",
   "./src/**/*.{js,jsx,ts,tsx}"
 ];
+
 export const theme = {
   extend: {
     colors: {
@@ -12,7 +12,7 @@ export const theme = {
         200: "#B6C3FF",
         300: "#9AB0FF",
         400: "#7D99FF",
-        500: "#5E7FFF",
+        500: "#5E7EFF",
         600: "#4F68E6",
         700: "#4050B3",
         800: "#303983",
@@ -54,6 +54,8 @@ export const theme = {
         800: "#262626",
         900: "#171717",
       },
+      // Milk theme: a soft off-white background
+      milk: '#fcfcf9',
     },
     boxShadow: {
       card: "0 4px 12px rgba(0, 0, 0, 0.08)",
@@ -67,4 +69,5 @@ export const theme = {
     },
   },
 };
+
 export const plugins = [];
