@@ -1,6 +1,15 @@
+// src/components/Navbar.jsx
 import React, { useEffect, useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { Menu, X, LogOut, User, ShoppingCart, Sun, Moon } from 'lucide-react';
+import {
+  Menu as MenuIcon,
+  X as CloseIcon,
+  LogOut,
+  User,
+  ShoppingCart,
+  Sun,
+  Moon,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import useAuthStore from '../store/useAuthStore';
 import useCartStore from '../store/useCartStore';
@@ -58,7 +67,10 @@ export default function Navbar() {
         className="fixed inset-x-0 top-0 z-50 bg-gradient-to-r from-primary-600 to-primary-400 text-white shadow-navbar"
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
-          <Link to="/" className="text-2xl font-extrabold hover:opacity-90 transition">
+          <Link
+            to="/"
+            className="text-2xl font-extrabold hover:opacity-90 transition"
+          >
             <span className="text-accent-300">e</span>Store
           </Link>
 
@@ -67,7 +79,10 @@ export default function Navbar() {
             <NavLink
               to="/"
               className={({ isActive }) =>
-                `px-2 py-1 rounded-md ${isActive ? 'font-semibold underline' : 'hover:bg-primary-500'}`}
+                `px-2 py-1 rounded-md ${
+                  isActive ? 'font-semibold underline' : 'hover:bg-primary-500'
+                }`
+              }
             >
               Home
             </NavLink>
@@ -75,8 +90,17 @@ export default function Navbar() {
             <div className="relative group">
               <button className="flex items-center px-2 py-1 rounded-md hover:bg-primary-500 transition">
                 Products
-                <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path d="M19 9l-7 7-7-7" strokeWidth="2" strokeLinecap="round"/>
+                <svg
+                  className="ml-1 w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    d="M19 9l-7 7-7-7"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
                 </svg>
               </button>
               <div className="absolute left-0 mt-2 w-48 bg-milk dark:bg-neutral-800 rounded-2xl shadow-dropdown opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto">
@@ -95,10 +119,14 @@ export default function Navbar() {
             <NavLink
               to="/cart"
               className={({ isActive }) =>
-                `flex items-center px-2 py-1 rounded-md ${isActive ? 'font-semibold underline' : 'hover:bg-primary-500'}`
+                `flex items-center px-2 py-1 rounded-md ${
+                  isActive
+                    ? 'font-semibold underline'
+                    : 'hover:bg-primary-500'
+                }`
               }
             >
-              <ShoppingCart size={18} className="mr-1"/> Cart
+              <ShoppingCart size={18} className="mr-1" /> Cart
               {cartItems.length > 0 && (
                 <span className="ml-1 text-xs bg-accent-300 text-white rounded-full px-2">
                   {cartItems.length}
@@ -106,20 +134,32 @@ export default function Navbar() {
               )}
             </NavLink>
 
-            <button onClick={toggleTheme} className="p-1 rounded-md hover:bg-primary-500 transition">
-              {theme === 'light' ? <Moon size={18}/> : <Sun size={18}/>}
+            <button
+              onClick={toggleTheme}
+              className="p-1 rounded-md hover:bg-primary-500 transition"
+            >
+              {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
             </button>
 
             {user ? (
-              <button onClick={handleLogout} className="flex items-center px-2 py-1 rounded-md hover:bg-primary-500 transition">
-                <LogOut size={18} className="mr-1"/> Logout
+              <button
+                onClick={handleLogout}
+                className="flex items-center px-2 py-1 rounded-md hover:bg-primary-500 transition"
+              >
+                <LogOut size={18} className="mr-1" /> Logout
               </button>
             ) : (
               <>
-                <NavLink to="/login" className="px-2 py-1 rounded-md hover:bg-primary-500 transition">
+                <NavLink
+                  to="/login"
+                  className="px-2 py-1 rounded-md hover:bg-primary-500 transition"
+                >
                   Log In
                 </NavLink>
-                <NavLink to="/signup" className="px-2 py-1 rounded-md hover:bg-primary-500 transition">
+                <NavLink
+                  to="/signup"
+                  className="px-2 py-1 rounded-md hover:bg-primary-500 transition"
+                >
                   Sign Up
                 </NavLink>
               </>
@@ -127,8 +167,11 @@ export default function Navbar() {
           </div>
 
           {/* Mobile Toggle */}
-          <button onClick={() => setDrawerOpen((o) => !o)} className="md:hidden p-1 rounded-md hover:bg-primary-500 transition">
-            {drawerOpen ? <CloseIcon size={24}/> : <MenuIcon size={24}/>}
+          <button
+            onClick={() => setDrawerOpen((o) => !o)}
+            className="md:hidden p-1 rounded-md hover:bg-primary-500 transition"
+          >
+            {drawerOpen ? <CloseIcon size={24} /> : <MenuIcon size={24} />}
           </button>
         </div>
 
@@ -143,7 +186,11 @@ export default function Navbar() {
               className="md:hidden bg-primary-50 dark:bg-neutral-900 overflow-hidden"
             >
               <div className="px-4 py-4 space-y-2">
-                <NavLink to="/" onClick={() => setDrawerOpen(false)} className="block py-2 hover:bg-primary-100 dark:hover:bg-neutral-700 rounded transition">
+                <NavLink
+                  to="/"
+                  onClick={() => setDrawerOpen(false)}
+                  className="block py-2 hover:bg-primary-100 dark:hover:bg-neutral-700 rounded transition"
+                >
                   Home
                 </NavLink>
                 <details className="group">
@@ -163,22 +210,37 @@ export default function Navbar() {
                     ))}
                   </div>
                 </details>
-                <NavLink to="/cart" onClick={() => setDrawerOpen(false)} className="block py-2 hover:bg-primary-100 dark:hover:bg-neutral-700 rounded transition">
+                <NavLink
+                  to="/cart"
+                  onClick={() => setDrawerOpen(false)}
+                  className="block py-2 hover:bg-primary-100 dark:hover:bg-neutral-700 rounded transition"
+                >
                   Cart
                 </NavLink>
                 {user ? (
                   <button
-                    onClick={() => { setDrawerOpen(false); handleLogout(); }}
+                    onClick={() => {
+                      setDrawerOpen(false);
+                      handleLogout();
+                    }}
                     className="w-full text-left py-2 hover:bg-primary-100 dark:hover:bg-neutral-700 rounded transition"
                   >
                     Logout
                   </button>
                 ) : (
                   <>
-                    <NavLink to="/login" onClick={() => setDrawerOpen(false)} className="block py-2 hover:bg-primary-100 dark:hover:bg-neutral-700 rounded transition">
+                    <NavLink
+                      to="/login"
+                      onClick={() => setDrawerOpen(false)}
+                      className="block py-2 hover:bg-primary-100 dark:hover:bg-neutral-700 rounded transition"
+                    >
                       Log In
                     </NavLink>
-                    <NavLink to="/signup" onClick={() => setDrawerOpen(false)} className="block py-2 hover:bg-primary-100 dark:hover:bg-neutral-700 rounded transition">
+                    <NavLink
+                      to="/signup"
+                      onClick={() => setDrawerOpen(false)}
+                      className="block py-2 hover:bg-primary-100 dark:hover:bg-neutral-700 rounded transition"
+                    >
                       Sign Up
                     </NavLink>
                   </>
@@ -189,7 +251,11 @@ export default function Navbar() {
         </AnimatePresence>
       </motion.nav>
 
-      <LogoutConfirmationModal open={confirmOpen} onConfirm={onConfirmLogout} onCancel={onCancelLogout} />
+      <LogoutConfirmationModal
+        open={confirmOpen}
+        onConfirm={onConfirmLogout}
+        onCancel={onCancelLogout}
+      />
     </>
   );
 }
