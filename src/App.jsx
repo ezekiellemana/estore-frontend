@@ -1,4 +1,3 @@
-// src/App.jsx
 import React, { useEffect } from 'react';
 import { ToastContainer } from 'react-toastify';
 import { Routes, Route, Navigate } from 'react-router-dom';
@@ -30,7 +29,6 @@ import { useIdleSession } from './hooks/useIdleSession';
 import IdleWarningModal from './components/IdleWarningModal';
 
 export default function App() {
-  // auth + session
   const logout = useAuthStore((s) => s.logout);
   const setSessionExpired = useAuthStore((s) => s.setSessionExpired);
   const hydrated = useAuthStore((s) => s.hydrated);
@@ -39,15 +37,17 @@ export default function App() {
 
   const [showWarning, setShowWarning] = React.useState(false);
 
-  // fetch user session on mount
+  // Fetch session on load
   useEffect(() => {
-    if (hydrated && !user) fetchUser();
+    if (hydrated && !user) {
+      fetchUser();
+    }
   }, [hydrated, user, fetchUser]);
 
-  // idle-timeout with warning
+  // Idle-session warning & logout
   useIdleSession({
-    timeout: 10 * 60 * 1000,
-    warningTime: 60 * 1000,
+    timeout: 10 * 60 * 1000,      // 10 minutes
+    warningTime: 60 * 1000,       // warn 1 minute before
     onWarning: () => {
       if (!useAuthStore.getState().skipIdleWarning) setShowWarning(true);
     },
@@ -58,7 +58,7 @@ export default function App() {
     },
   });
 
-  // show loading until auth state ready
+  // Show loading until auth is ready
   if (!hydrated) {
     return (
       <div className="min-h-screen flex items-center justify-center text-lg text-neutral-500">
@@ -67,7 +67,7 @@ export default function App() {
     );
   }
 
-  // Protect user-only pages
+  // Guard for user-only pages
   function RequireAuth({ children }) {
     const usr = useAuthStore((s) => s.user);
     const hyd = useAuthStore((s) => s.hydrated);
@@ -89,7 +89,6 @@ export default function App() {
 
   return (
     <>
-      {/* Idle-warning modal */}
       <IdleWarningModal
         isOpen={showWarning}
         warningDurationSec={60}
@@ -116,7 +115,7 @@ export default function App() {
         {/* ===== OAUTH CALLBACK ===== */}
         <Route path="/oauth" element={<OAuth />} />
 
-        {/* ===== PUBLIC SITE ===== */}
+        {/* ===== PUBLIC SHOP ===== */}
         <Route element={<Layout />}>
           <Route path="/" element={<Home />} />
           <Route path="/products" element={<Products />} />
@@ -173,7 +172,6 @@ export default function App() {
             }
           />
 
-          {/* catch-all */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

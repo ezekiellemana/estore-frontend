@@ -17,12 +17,12 @@ import {
 import Breadcrumbs from '../components/Breadcrumbs';
 
 const LINKS = [
-  { to: '/admin/users', label: 'Users', icon: <User size={20}/> },
-  { to: '/admin/products', label: 'Products', icon: <FilePlus size={20}/> },
-  { to: '/admin/categories', label: 'Categories', icon: <Tag size={20}/> },
-  { to: '/admin/orders', label: 'Orders', icon: <ShoppingCart size={20}/> },
-  { to: '/admin/reviews', label: 'Reviews', icon: <FilePlus size={20}/> },
-  { to: '/admin/analytics/charts', label: 'Analytics', icon: <BarChart2 size={20}/> },
+  { to: '/admin/users', label: 'Users', icon: <User size={20} /> },
+  { to: '/admin/products', label: 'Products', icon: <FilePlus size={20} /> },
+  { to: '/admin/categories', label: 'Categories', icon: <Tag size={20} /> },
+  { to: '/admin/orders', label: 'Orders', icon: <ShoppingCart size={20} /> },
+  { to: '/admin/reviews', label: 'Reviews', icon: <FilePlus size={20} /> },
+  { to: '/admin/analytics/charts', label: 'Analytics', icon: <BarChart2 size={20} /> },
 ];
 
 export default function AdminDashboard() {
@@ -31,7 +31,7 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // redirect if not admin
+  // Redirect non-admins
   useEffect(() => {
     if (user && !user.isAdmin) {
       toast.error('Admin access only.');
@@ -46,37 +46,32 @@ export default function AdminDashboard() {
     navigate('/', { replace: true });
   };
 
-  // shared sidebar content
+  // Sidebar content
   const Sidebar = () => (
     <div className="h-full flex flex-col bg-primary-700 text-white w-64">
       <div className="flex items-center justify-between px-6 py-4 border-b border-primary-800">
         <h1 className="text-xl font-bold">eStore Admin</h1>
-        {/* close button for mobile */}
-        <button
-          className="md:hidden p-1"
-          onClick={() => setDrawerOpen(false)}
-          aria-label="Close menu"
-        >
-          <CloseIcon size={20}/>
+        <button className="md:hidden p-1" onClick={() => setDrawerOpen(false)}>
+          <CloseIcon size={20} />
         </button>
       </div>
-      <nav className="flex-1 overflow-auto px-4 py-6 space-y-2">
+      <div className="flex-1 overflow-auto px-4 py-6 space-y-2">
         {LINKS.map(({ to, label, icon }) => (
           <NavLink
             key={to}
             to={to}
+            onClick={() => setDrawerOpen(false)}
             className={({ isActive }) =>
               `flex items-center px-4 py-2 rounded-lg transition ${
                 isActive ? 'bg-primary-800' : 'hover:bg-primary-600'
               }`
             }
-            onClick={() => setDrawerOpen(false)}
           >
             <span className="mr-3">{icon}</span>
             <span>{label}</span>
           </NavLink>
         ))}
-      </nav>
+      </div>
       <div className="px-6 py-4 border-t border-primary-800 text-sm">
         Signed in as <strong>{user?.name}</strong>
       </div>
@@ -85,7 +80,8 @@ export default function AdminDashboard() {
           onClick={handleLogout}
           className="w-full bg-secondary hover:bg-secondary-600 text-white py-2 rounded-2xl transition"
         >
-          <LogOut size={18} className="inline-block mr-2"/> Logout
+          <LogOut size={18} className="inline-block mr-2" />
+          Logout
         </button>
       </div>
     </div>
@@ -93,29 +89,19 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900">
-      {/* Sticky header */}
-      <header className="flex items-center justify-between bg-white dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 px-4 py-3 md:hidden">
-        <button
-          onClick={() => setDrawerOpen(true)}
-          className="p-1 text-primary-600"
-          aria-label="Open menu"
-        >
-          <MenuIcon size={24}/>
+      {/* Mobile header */}
+      <header className="md:hidden flex items-center justify-between bg-white dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 px-4 py-3">
+        <button onClick={() => setDrawerOpen(true)} className="p-1 text-primary-600">
+          <MenuIcon size={24} />
         </button>
-        <h2 className="text-lg font-semibold text-neutral-800 dark:text-neutral-100">
-          Admin Dashboard
-        </h2>
-        <button
-          onClick={handleLogout}
-          className="p-1 text-primary-600"
-          aria-label="Logout"
-        >
-          <LogOut size={24}/>
+        <h2 className="text-lg font-semibold">Admin Dashboard</h2>
+        <button onClick={handleLogout} className="p-1 text-primary-600">
+          <LogOut size={24} />
         </button>
       </header>
 
       <div className="flex">
-        {/* Sidebar: mobile drawer + desktop permanent */}
+        {/* Mobile drawer */}
         <AnimatePresence>
           {drawerOpen && (
             <motion.div
@@ -124,7 +110,6 @@ export default function AdminDashboard() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
             >
-              {/* backdrop */}
               <div
                 className="fixed inset-0 bg-black bg-opacity-50"
                 onClick={() => setDrawerOpen(false)}
@@ -142,13 +127,14 @@ export default function AdminDashboard() {
           )}
         </AnimatePresence>
 
+        {/* Desktop sidebar */}
         <aside className="hidden md:flex">
           <Sidebar />
         </aside>
 
         {/* Main content */}
-        <div className="flex-1 flex flex-col">
-          {/* Desktop header with breadcrumbs */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Desktop header */}
           <header className="hidden md:flex items-center justify-between bg-white dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 px-6 py-4">
             <h2 className="text-2xl font-semibold text-neutral-800 dark:text-neutral-100">
               Admin Dashboard
@@ -157,17 +143,15 @@ export default function AdminDashboard() {
           </header>
 
           <main className="flex-1 overflow-auto p-4 md:p-6 lg:p-8">
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.div
-                key={window.location.pathname}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3 }}
-              >
-                <Outlet />
-              </motion.div>
-            </AnimatePresence>
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.3 }}
+              className="space-y-6"
+            >
+              <Outlet />
+            </motion.div>
           </main>
         </div>
       </div>

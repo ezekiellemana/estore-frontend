@@ -8,6 +8,9 @@ export const content = [
 
 export const theme = {
   extend: {
+    fontFamily: {
+      sans: ['Inter', 'ui-sans-serif', 'system-ui'],
+    },
     colors: {
       primary: {
         50: '#F2F5FF',
@@ -20,18 +23,6 @@ export const theme = {
         700: '#4050B3',
         800: '#303983',
         900: '#202652',
-      },
-      secondary: {
-        50: '#FFF2F8',
-        100: '#FFD6E3',
-        200: '#FFB6CC',
-        300: '#FF99B6',
-        400: '#FF7FA3',
-        500: '#FF5F8E',
-        600: '#E64E7B',
-        700: '#B33B62',
-        800: '#802A48',
-        900: '#4D1A2E',
       },
       accent: {
         50: '#EFFCF5',
@@ -61,13 +52,12 @@ export const theme = {
     },
     boxShadow: {
       card: '0 4px 12px rgba(0, 0, 0, 0.08)',
-      hoverCard: '0 8px 20px rgba(0, 0, 0, 0.12)',
-      dropdown: '0 8px 16px rgba(0, 0, 0, 0.1)',
       navbar: '0 2px 8px rgba(0, 0, 0, 0.06)',
+      dropdown: '0 8px 16px rgba(0, 0, 0, 0.1)',
     },
     borderRadius: {
+      lg: '0.75rem',
       xl: '1rem',
-      '2xl': '1.5rem',
     },
   },
 };
