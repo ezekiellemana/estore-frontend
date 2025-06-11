@@ -1,7 +1,7 @@
 // src/pages/Login.jsx
 
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, Navigate } from 'react-router-dom';
 import api from '../services/api';
 import useAuthStore from '../store/useAuthStore';
 import { motion } from 'framer-motion';
@@ -15,32 +15,39 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
   const navigate = useNavigate();
+
+  // Redirect away if already logged in
+  if (user) {
+    return <Navigate to='/' replace />;
+  }
 
   const submitHandler = async (e) => {
     e.preventDefault();
     setLoading(true);
-
     try {
-      // No need to manage tokens now; cookies/sessions are handled by the backend!
-      await api.post('/api/users/login', { email, password }); // Will set cookie if login succeeds
+      // Authenticate (session cookie)
+      await api.post('/api/users/login', { email, password });
 
-      // Get user info using the session cookie
+      // Fetch the logged-in user
       const { data: userData } = await api.get('/api/users/profile');
       setUser(userData);
 
-      if (userData.isAdmin) {
-        toast.success(`Welcome Admin, ${userData.name}!`);
-        navigate('/admin');
-      } else {
-        toast.success(`Welcome back, ${userData.name}!`);
-        navigate('/profile');
-      }
+      toast.success(
+        userData.isAdmin
+          ? `Welcome Admin, ${userData.name}!`
+          : `Welcome back, ${userData.name}!`
+      );
+
+      // Replace login entry in history
+      const redirectTo = userData.isAdmin ? '/admin' : '/profile';
+      navigate(redirectTo, { replace: true });
     } catch (err) {
       console.error(err);
       toast.error(
-        err.response?.data?.error || 'Login failed. Check email/password.'
+        err.response?.data?.error || 'Login failed. Check your credentials.'
       );
     } finally {
       setLoading(false);
@@ -56,7 +63,7 @@ export default function Login() {
         whileHover={{ rotateY: 4, rotateX: 2, transition: { duration: 0.3 } }}
         transition={{ duration: 0.4 }}
       >
-        <div className="absolute inset-0 bg-gradient-to-r from-primary-300 to-primary-500 rounded-3xl blur-xl opacity-30 pointer-events-none"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-primary-300 to-primary-500 rounded-3xl blur-xl opacity-30 pointer-events-none" />
         <motion.div
           className="relative bg-white rounded-2xl shadow-lg p-8"
           initial={{ y: 20, opacity: 0 }}
@@ -67,7 +74,7 @@ export default function Login() {
             Log In
           </h2>
           <form onSubmit={submitHandler} className="space-y-6">
-            {/* Email Field */}
+            {/* Email */}
             <div className="relative">
               <input
                 id="email"
@@ -88,7 +95,7 @@ export default function Login() {
               </label>
             </div>
 
-            {/* Password Field */}
+            {/* Password */}
             <div className="relative">
               <input
                 id="password"
@@ -109,7 +116,7 @@ export default function Login() {
               </label>
               <button
                 type="button"
-                onClick={() => setShowPassword((prev) => !prev)}
+                onClick={() => setShowPassword((p) => !p)}
                 className="absolute top-2 right-3 text-neutral-500 hover:text-neutral-700 focus:outline-none"
               >
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -117,20 +124,13 @@ export default function Login() {
             </div>
 
             <div className="flex justify-between items-center text-sm">
-              <Link
-                to="/forgot-password"
-                className="text-accent-500 hover:underline"
-              >
+              <Link to="/forgot-password" className="text-accent-500 hover:underline">
                 Forgot password?
               </Link>
             </div>
 
             <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
-              <AnimatedButton
-                type="submit"
-                className="w-full text-center"
-                disabled={loading}
-              >
+              <AnimatedButton type="submit" className="w-full text-center" disabled={loading}>
                 {loading ? 'Logging in…' : 'Log In'}
               </AnimatedButton>
             </motion.div>
