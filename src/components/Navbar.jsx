@@ -1,6 +1,7 @@
+// src/components/Navbar.jsx
 import React, { useEffect, useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { Menu, LogOut, User, ShoppingCart } from 'lucide-react';
+import { Menu, X, LogOut, User, ShoppingCart } from 'lucide-react';
 import { motion } from 'framer-motion';
 import useAuthStore from '../store/useAuthStore';
 import useCartStore from '../store/useCartStore';
@@ -11,9 +12,9 @@ import {
   Dialog,
   DialogContent,
   DialogHeader,
-  DialogFooter,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog';
 
 export default function Navbar() {
@@ -21,27 +22,27 @@ export default function Navbar() {
   const logout = useAuthStore((s) => s.logout);
   const cartItems = useCartStore((s) => s.items);
   const navigate = useNavigate();
-  const [openLogoutModal, setOpenLogoutModal] = useState(false);
+  const [confirmModal, setConfirmModal] = useState(false);
 
+  // Prompt logout on browser “back” if logged in
   useEffect(() => {
     if (!user) return;
     window.history.pushState(null, '', window.location.href);
     const onPop = (e) => {
       e.preventDefault();
-      setOpenLogoutModal(true);
+      setConfirmModal(true);
     };
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
   }, [user]);
 
-  const confirmLogout = () => {
-    setOpenLogoutModal(false);
+  const handleLogout = () => {
+    setConfirmModal(false);
     logout();
     navigate('/');
   };
-
-  const cancelLogout = () => {
-    setOpenLogoutModal(false);
+  const handleCancel = () => {
+    setConfirmModal(false);
     window.history.pushState(null, '', window.location.href);
   };
 
@@ -68,22 +69,25 @@ export default function Navbar() {
         initial={{ y: -50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.5 }}
-        className="bg-gradient-to-r from-primary-600 to-primary-400 text-white sticky top-0 z-50 shadow-md"
+        className="fixed inset-x-0 top-0 bg-gradient-to-r from-primary-600 to-primary-400 text-white shadow-md z-50"
       >
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 py-4 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto flex items-center justify-between px-4 py-3 md:px-6 lg:px-8">
+          {/* Logo */}
           <Link to="/" className="text-2xl font-extrabold tracking-tight">
             <span className="text-accent">e</span>Store
           </Link>
 
-          {/* Desktop Links */}
+          {/* Desktop */}
           <div className="hidden md:flex space-x-8 items-center">
             {navLinks.map(({ to, label, icon, badge }) => (
               <NavLink
                 key={to}
                 to={to}
                 className={({ isActive }) =>
-                  `flex items-center hover:text-neutral-100 transition ${
-                    isActive ? 'font-semibold underline underline-offset-4' : ''
+                  `flex items-center transition ${
+                    isActive
+                      ? 'font-semibold underline underline-offset-4'
+                      : 'hover:text-neutral-100'
                   }`
                 }
               >
@@ -96,13 +100,16 @@ export default function Navbar() {
                 )}
               </NavLink>
             ))}
+
             {authLinks.map(({ to, label, icon }) => (
               <NavLink
                 key={to}
                 to={to}
                 className={({ isActive }) =>
-                  `flex items-center hover:text-neutral-100 transition ${
-                    isActive ? 'font-semibold underline underline-offset-4' : ''
+                  `flex items-center transition ${
+                    isActive
+                      ? 'font-semibold underline underline-offset-4'
+                      : 'hover:text-neutral-100'
                   }`
                 }
               >
@@ -110,37 +117,50 @@ export default function Navbar() {
                 {label}
               </NavLink>
             ))}
+
             {user && (
-              <Button variant="ghost" onClick={confirmLogout} className="flex items-center">
+              <Button
+                variant="ghost"
+                onClick={() => setConfirmModal(true)}
+                className="flex items-center"
+              >
                 <LogOut size={18} className="mr-1" />
                 Logout
               </Button>
             )}
           </div>
 
-          {/* Mobile Menu */}
+          {/* Mobile Hamburger */}
           <div className="md:hidden">
             <Sheet>
               <SheetTrigger asChild>
-                <Button variant="outline">
+                <Button aria-label="Open menu">
                   <Menu size={24} />
                 </Button>
               </SheetTrigger>
-              <SheetContent
-                side="right"
-                className="w-60 p-4 bg-gradient-to-b from-primary-600 to-primary-400 text-white"
-              >
-                <ScrollArea className="h-full">
+
+              <SheetContent side="right" className="bg-white h-full w-64 p-4">
+                <div className="flex justify-between items-center mb-6">
+                  <span className="text-lg font-bold">Menu</span>
+                  <SheetClose asChild>
+                    <Button aria-label="Close menu">
+                      <X size={24} />
+                    </Button>
+                  </SheetClose>
+                </div>
+
+                <ScrollArea className="h-[calc(100%-4rem)]">
                   <nav className="flex flex-col space-y-4">
                     {navLinks.map(({ to, label, icon, badge }) => (
                       <NavLink
                         key={to}
                         to={to}
+                        onClick={() => window.history.pushState(null, '', window.location.href)}
                         className={({ isActive }) =>
                           `flex items-center px-2 py-2 rounded-lg transition ${
                             isActive
-                              ? 'bg-primary-500 text-white font-semibold'
-                              : 'hover:bg-primary-500 text-white'
+                              ? 'bg-primary-100 text-primary-700 font-semibold'
+                              : 'hover:bg-primary-50'
                           }`
                         }
                       >
@@ -153,15 +173,17 @@ export default function Navbar() {
                         )}
                       </NavLink>
                     ))}
+
                     {authLinks.map(({ to, label, icon }) => (
                       <NavLink
                         key={to}
                         to={to}
+                        onClick={() => window.history.pushState(null, '', window.location.href)}
                         className={({ isActive }) =>
                           `flex items-center px-2 py-2 rounded-lg transition ${
                             isActive
-                              ? 'bg-primary-500 text-white font-semibold'
-                              : 'hover:bg-primary-500 text-white'
+                              ? 'bg-primary-100 text-primary-700 font-semibold'
+                              : 'hover:bg-primary-50'
                           }`
                         }
                       >
@@ -169,14 +191,15 @@ export default function Navbar() {
                         {label}
                       </NavLink>
                     ))}
+
                     {user && (
                       <SheetClose asChild>
                         <Button
-                          variant="ghost"
-                          onClick={confirmLogout}
-                          className="flex items-center px-2 py-2 rounded-lg hover:bg-primary-500 transition"
+                          variant="outline"
+                          onClick={() => setConfirmModal(true)}
+                          className="mt-4 w-full flex items-center justify-center"
                         >
-                          <LogOut size={18} className="mr-1" />
+                          <LogOut size={18} className="mr-2" />
                           Logout
                         </Button>
                       </SheetClose>
@@ -189,18 +212,20 @@ export default function Navbar() {
         </div>
       </motion.nav>
 
-      {/* Logout Confirmation Modal */}
-      <Dialog open={openLogoutModal} onOpenChange={(o) => setOpenLogoutModal(o)}>
-        <DialogContent>
+      {/* Logout Confirmation */}
+      <Dialog open={confirmModal} onOpenChange={setConfirmModal}>
+        <DialogContent className="max-w-sm mx-auto mt-24">
           <DialogHeader>
             <DialogTitle>Confirm Logout</DialogTitle>
-            <DialogDescription>Are you sure you want to log out?</DialogDescription>
+            <DialogDescription>
+              Are you sure you want to log out?
+            </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={cancelLogout}>
+          <DialogFooter className="flex justify-end space-x-2">
+            <Button variant="outline" onClick={handleCancel}>
               Cancel
             </Button>
-            <Button onClick={confirmLogout}>Logout</Button>
+            <Button onClick={handleLogout}>Logout</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
