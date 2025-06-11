@@ -27,7 +27,7 @@ import { useIdleSession } from './hooks/useIdleSession';
 import IdleWarningModal from './components/IdleWarningModal';
 
 export default function App() {
-  // ─── Theme: sync <html> class from localStorage ─────────────────────
+  // ─── Theme sync ─────────────────────────────────────────────
   const theme = useThemeStore((s) => s.theme);
   const toggleTheme = useThemeStore((s) => s.toggle);
   useEffect(() => {
@@ -35,7 +35,7 @@ export default function App() {
     document.documentElement.classList.toggle('dark', stored === 'dark');
   }, []);
 
-  // ─── Auth & Session ────────────────────────────────────────────────
+  // ─── Auth & Session ─────────────────────────────────────────
   const logout = useAuthStore((s) => s.logout);
   const setSessionExpired = useAuthStore((s) => s.setSessionExpired);
   const hydrated = useAuthStore((s) => s.hydrated);
@@ -44,21 +44,17 @@ export default function App() {
 
   const [showWarning, setShowWarning] = React.useState(false);
 
-  // on app load, fetch user if not in store
+  // fetch on load
   useEffect(() => {
-    if (hydrated && !user) {
-      fetchUser();
-    }
+    if (hydrated && !user) fetchUser();
   }, [hydrated, user, fetchUser]);
 
-  // idle-session with warning & logout
+  // idle-session
   useIdleSession({
-    timeout: 10 * 60 * 1000,      // 10 min
-    warningTime: 60 * 1000,       // warn 1 min before
+    timeout: 10 * 60 * 1000,
+    warningTime: 60 * 1000,
     onWarning: () => {
-      if (!useAuthStore.getState().skipIdleWarning) {
-        setShowWarning(true);
-      }
+      if (!useAuthStore.getState().skipIdleWarning) setShowWarning(true);
     },
     onLogout: () => {
       setShowWarning(false);
@@ -67,7 +63,6 @@ export default function App() {
     },
   });
 
-  // loading state while rehydrating auth
   if (!hydrated) {
     return (
       <div className="h-screen flex items-center justify-center text-lg text-neutral-500 dark:text-neutral-400">
@@ -76,7 +71,7 @@ export default function App() {
     );
   }
 
-  // ─── Route Guards ─────────────────────────────────────────────────
+  // ─── Route Guards ────────────────────────────────────────────
   function RedirectIfAdmin({ children }) {
     const isAdmin = useAuthStore((s) => s.user?.isAdmin);
     const nav = useNavigate();
@@ -107,7 +102,7 @@ export default function App() {
 
   return (
     <>
-      {/* Idle Timeout Warning */}
+      {/* Idle warning modal */}
       <IdleWarningModal
         isOpen={showWarning}
         warningDurationSec={60}
@@ -120,7 +115,7 @@ export default function App() {
       />
 
       <Routes>
-        {/* ========== ADMIN ========== */}
+        {/* ===== ADMIN ===== */}
         <Route path="/admin/*" element={<AdminDashboard />}>
           <Route path="users" element={<AdminUsers />} />
           <Route path="products" element={<AdminProducts />} />
@@ -131,10 +126,10 @@ export default function App() {
           <Route path="*" element={<Navigate to="users" replace />} />
         </Route>
 
-        {/* ========== OAUTH CALLBACK ========== */}
+        {/* ===== OAUTH CALLBACK ===== */}
         <Route path="/oauth" element={<OAuth />} />
 
-        {/* ========== PUBLIC ========== */}
+        {/* ===== PUBLIC ===== */}
         <Route element={<Layout />}>
           <Route
             path="/"
@@ -218,10 +213,7 @@ export default function App() {
         </Route>
       </Routes>
 
-      <ToastContainer
-        position="bottom-right"
-        theme={theme === 'dark' ? 'dark' : 'light'}
-      />
+      <ToastContainer position="bottom-right" theme={theme === 'dark' ? 'dark' : 'light'} />
     </>
   );
 }
