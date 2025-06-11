@@ -30,6 +30,7 @@ import { useIdleSession } from './hooks/useIdleSession';
 import IdleWarningModal from './components/IdleWarningModal';
 
 export default function App() {
+  // auth + session
   const logout = useAuthStore((s) => s.logout);
   const setSessionExpired = useAuthStore((s) => s.setSessionExpired);
   const hydrated = useAuthStore((s) => s.hydrated);
@@ -38,19 +39,17 @@ export default function App() {
 
   const [showWarning, setShowWarning] = React.useState(false);
 
-  // Fetch session on load
+  // fetch user session on mount
   useEffect(() => {
     if (hydrated && !user) fetchUser();
   }, [hydrated, user, fetchUser]);
 
-  // Idle‐session warning & logout
+  // idle-timeout with warning
   useIdleSession({
     timeout: 10 * 60 * 1000,
     warningTime: 60 * 1000,
     onWarning: () => {
-      if (!useAuthStore.getState().skipIdleWarning) {
-        setShowWarning(true);
-      }
+      if (!useAuthStore.getState().skipIdleWarning) setShowWarning(true);
     },
     onLogout: () => {
       setShowWarning(false);
@@ -59,7 +58,7 @@ export default function App() {
     },
   });
 
-  // Show loader until auth is ready
+  // show loading until auth state ready
   if (!hydrated) {
     return (
       <div className="min-h-screen flex items-center justify-center text-lg text-neutral-500">
@@ -68,13 +67,16 @@ export default function App() {
     );
   }
 
+  // Protect user-only pages
   function RequireAuth({ children }) {
     const usr = useAuthStore((s) => s.user);
     const hyd = useAuthStore((s) => s.hydrated);
     const fetch = useAuthStore((s) => s.fetchUser);
+
     useEffect(() => {
       if (hyd && !usr) fetch();
     }, [hyd, usr, fetch]);
+
     if (!hyd) {
       return (
         <div className="min-h-screen flex items-center justify-center text-lg text-neutral-500">
@@ -86,8 +88,8 @@ export default function App() {
   }
 
   return (
-    // Prevent horizontal overflow on mobile
-    <div className="min-h-screen w-full overflow-x-hidden">
+    <>
+      {/* Idle-warning modal */}
       <IdleWarningModal
         isOpen={showWarning}
         warningDurationSec={60}
@@ -161,6 +163,7 @@ export default function App() {
               </RedirectIfAdmin>
             }
           />
+
           <Route
             path="/profile"
             element={
@@ -169,11 +172,13 @@ export default function App() {
               </RequireAuth>
             }
           />
+
+          {/* catch-all */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
 
       <ToastContainer position="bottom-right" />
-    </div>
+    </>
   );
 }
