@@ -2,22 +2,33 @@
 import React from 'react';
 
 /**
- * Stubbed Dialog components so imports resolve.
- * Swap these for your real UI library later.
+ * Stubbed Dialog components that respect the `open` prop.
  */
 
+// Only render children when `open` is true
 export function Dialog({ children, open, onOpenChange }) {
-  return <>{children}</>;
-}
-
-export function DialogTrigger({ children, ...props }) {
-  return <>{children}</>;
+  if (!open) return null;
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      className="fixed inset-0 flex items-center justify-center z-50"
+      onClick={() => {
+        /* clicking backdrop could call onOpenChange(false) if you like */
+        // if (onOpenChange) onOpenChange(false);
+      }}
+    >
+      {children}
+    </div>
+  );
 }
 
 export function DialogContent({ children, className = '', ...props }) {
+  // stop clicks inside content from closing
   return (
     <div
-      className={`fixed inset-0 flex items-center justify-center p-4 ${className}`}
+      className={`bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6 ${className}`}
+      onClick={(e) => e.stopPropagation()}
       {...props}
     >
       {children}
@@ -27,7 +38,7 @@ export function DialogContent({ children, className = '', ...props }) {
 
 export function DialogHeader({ children, className = '', ...props }) {
   return (
-    <div className={`px-4 pb-2 border-b ${className}`} {...props}>
+    <div className={`mb-4 ${className}`} {...props}>
       {children}
     </div>
   );
@@ -35,7 +46,7 @@ export function DialogHeader({ children, className = '', ...props }) {
 
 export function DialogTitle({ children, className = '', ...props }) {
   return (
-    <h2 className={`text-lg font-semibold ${className}`} {...props}>
+    <h2 className={`text-xl font-semibold mb-2 ${className}`} {...props}>
       {children}
     </h2>
   );
@@ -43,7 +54,7 @@ export function DialogTitle({ children, className = '', ...props }) {
 
 export function DialogDescription({ children, className = '', ...props }) {
   return (
-    <p className={`text-sm leading-relaxed ${className}`} {...props}>
+    <p className={`text-sm mb-4 ${className}`} {...props}>
       {children}
     </p>
   );
@@ -51,7 +62,7 @@ export function DialogDescription({ children, className = '', ...props }) {
 
 export function DialogFooter({ children, className = '', ...props }) {
   return (
-    <div className={`px-4 pt-2 border-t flex justify-end ${className}`} {...props}>
+    <div className={`flex justify-end space-x-2 mt-4 ${className}`} {...props}>
       {children}
     </div>
   );
