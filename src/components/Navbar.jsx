@@ -1,4 +1,3 @@
-// src/components/Navbar.jsx
 import React, { useEffect, useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { Menu, LogOut, User, ShoppingCart } from 'lucide-react';
@@ -10,7 +9,6 @@ import { Sheet, SheetTrigger, SheetContent, SheetClose } from '@/components/ui/s
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Dialog,
-  DialogTrigger,
   DialogContent,
   DialogHeader,
   DialogFooter,
@@ -25,7 +23,6 @@ export default function Navbar() {
   const navigate = useNavigate();
   const [openLogoutModal, setOpenLogoutModal] = useState(false);
 
-  // HANDLE BACK NAV: show logout modal
   useEffect(() => {
     if (!user) return;
     window.history.pushState(null, '', window.location.href);
@@ -58,7 +55,6 @@ export default function Navbar() {
       badge: cartItems.length,
     },
   ];
-
   const authLinks = user
     ? [{ to: '/profile', label: 'Profile', icon: <User size={18} className="mr-1 inline" /> }]
     : [
@@ -72,7 +68,7 @@ export default function Navbar() {
         initial={{ y: -50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.5 }}
-        className="bg-gradient-to-r from-primary-600 to-primary-400 text-white sticky top-0 z-50 shadow-md mb-16"
+        className="bg-gradient-to-r from-primary-600 to-primary-400 text-white sticky top-0 z-50 shadow-md"
       >
         <div className="max-w-7xl mx-auto px-6 lg:px-8 py-4 flex items-center justify-between">
           <Link to="/" className="text-2xl font-extrabold tracking-tight">
@@ -147,7 +143,6 @@ export default function Navbar() {
                               : 'hover:bg-primary-500 text-white'
                           }`
                         }
-                        onClick={() => setOpenLogoutModal(false)}
                       >
                         {icon}
                         {label}
@@ -169,7 +164,6 @@ export default function Navbar() {
                               : 'hover:bg-primary-500 text-white'
                           }`
                         }
-                        onClick={() => setOpenLogoutModal(false)}
                       >
                         {icon}
                         {label}
