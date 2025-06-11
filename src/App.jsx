@@ -40,19 +40,15 @@ export default function App() {
 
   // Fetch session on app load
   useEffect(() => {
-    if (hydrated && !user) {
-      fetchUser();
-    }
+    if (hydrated && !user) fetchUser();
   }, [hydrated, user, fetchUser]);
 
-  // Idle session management
+  // Idle session warning & logout
   useIdleSession({
     timeout: 10 * 60 * 1000,
     warningTime: 60 * 1000,
     onWarning: () => {
-      if (!useAuthStore.getState().skipIdleWarning) {
-        setShowWarning(true);
-      }
+      if (!useAuthStore.getState().skipIdleWarning) setShowWarning(true);
     },
     onLogout: () => {
       setShowWarning(false);
@@ -70,16 +66,14 @@ export default function App() {
     );
   }
 
-  // Guard for authenticated routes
+  // Protect user-only pages
   function RequireAuth({ children }) {
     const usr = useAuthStore((s) => s.user);
     const hyd = useAuthStore((s) => s.hydrated);
     const fetch = useAuthStore((s) => s.fetchUser);
-
     useEffect(() => {
       if (hyd && !usr) fetch();
     }, [hyd, usr, fetch]);
-
     if (!hyd) {
       return (
         <div className="h-screen flex items-center justify-center text-lg text-neutral-500">
@@ -92,7 +86,7 @@ export default function App() {
 
   return (
     <>
-      {/* Idle-timeout warning */}
+      {/* Pre-logout warning modal */}
       <IdleWarningModal
         isOpen={showWarning}
         warningDurationSec={60}
@@ -105,10 +99,10 @@ export default function App() {
       />
 
       <Routes>
-        {/* ===== ADMIN ===== */}
+        {/* ==== ADMIN PANEL ==== */}
         <Route path="/admin/*" element={<AdminDashboard />}>
-          {/* default /admin → /admin/users */}
-          <Route index element={<Navigate to="users" replace />} />
+          {/* default /admin shows the Users page */}
+          <Route index element={<AdminUsers />} />
           <Route path="users" element={<AdminUsers />} />
           <Route path="products" element={<AdminProducts />} />
           <Route path="categories" element={<AdminCategories />} />
@@ -117,42 +111,20 @@ export default function App() {
           <Route path="analytics/charts" element={<AdminAnalyticsCharts />} />
         </Route>
 
-        {/* ===== OAUTH CALLBACK ===== */}
+        {/* ==== OAUTH CALLBACK ==== */}
         <Route path="/oauth" element={<OAuth />} />
 
-        {/* ===== PUBLIC SHOP ===== */}
+        {/* ==== PUBLIC SITE ==== */}
         <Route element={<Layout />}>
-          <Route
-            path="/"
-            element={
-              <RedirectIfAdmin>
-                <Home />
-              </RedirectIfAdmin>
-            }
-          />
-          <Route
-            path="/products"
-            element={
-              <RedirectIfAdmin>
-                <Products />
-              </RedirectIfAdmin>
-            }
-          />
-          <Route
-            path="/products/:id"
-            element={
-              <RedirectIfAdmin>
-                <ProductDetails />
-              </RedirectIfAdmin>
-            }
-          />
+          <Route path="/" element={<Home />} />
+          <Route path="/products" element={<Products />} />
+          <Route path="/products/:id" element={<ProductDetails />} />
+
           <Route
             path="/cart"
             element={
               <RequireAuth>
-                <RedirectIfAdmin>
-                  <Cart />
-                </RedirectIfAdmin>
+                <Cart />
               </RequireAuth>
             }
           />
@@ -160,17 +132,16 @@ export default function App() {
             path="/checkout"
             element={
               <RequireAuth>
-                <RedirectIfAdmin>
-                  <Checkout />
-                </RedirectIfAdmin>
+                <Checkout />
               </RequireAuth>
             }
           />
 
+          {/* Admin-level redirect only on auth pages */}
           <Route
             path="/login"
             element={
-              <RedirectIfAdmin>
+              <RedirectIfAdmin to="/admin">
                 <Login />
               </RedirectIfAdmin>
             }
@@ -178,7 +149,7 @@ export default function App() {
           <Route
             path="/signup"
             element={
-              <RedirectIfAdmin>
+              <RedirectIfAdmin to="/admin">
                 <Signup />
               </RedirectIfAdmin>
             }
@@ -186,21 +157,22 @@ export default function App() {
           <Route
             path="/forgot-password"
             element={
-              <RedirectIfAdmin>
+              <RedirectIfAdmin to="/admin">
                 <ForgotPassword />
               </RedirectIfAdmin>
             }
           />
+
           <Route
             path="/profile"
             element={
               <RequireAuth>
-                <RedirectIfAdmin>
-                  <Profile />
-                </RedirectIfAdmin>
+                <Profile />
               </RequireAuth>
             }
           />
+
+          {/* Catch-all */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

@@ -57,7 +57,7 @@ export default function Login() {
       // Redirect based on role
       if (userData.isAdmin) {
         toast.success(`Welcome Admin, ${userData.name}!`);
-        navigate('/admin/users', { replace: true });
+        navigate('/admin', { replace: true });
       } else {
         toast.success(`Welcome back, ${userData.name}!`);
         navigate('/profile', { replace: true });
