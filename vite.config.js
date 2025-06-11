@@ -6,7 +6,9 @@ import path from 'path';
 export default defineConfig({
   plugins: [react()],
   resolve: {
-    alias: { '@': path.resolve(__dirname, './src') },
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
   },
   build: {
     rollupOptions: {
@@ -19,11 +21,12 @@ export default defineConfig({
             if (id.includes('recharts') || id.includes('chart.js')) {
               return 'charts';
             }
-            return 'vendor'; // everything else in node_modules
+            return 'vendor';
           }
         },
       },
     },
-    chunkSizeWarningLimit: 1000, // bump the warning threshold if you want
+    // bump warning limit or remove if you prefer
+    chunkSizeWarningLimit: 1000,
   },
 });
