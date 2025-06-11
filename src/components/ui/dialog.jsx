@@ -10,6 +10,10 @@ export function Dialog({ children, open, onOpenChange }) {
   return <>{children}</>;
 }
 
+export function DialogTrigger({ children, ...props }) {
+  return <>{children}</>;
+}
+
 export function DialogContent({ children, className = '', ...props }) {
   return (
     <div
@@ -37,7 +41,6 @@ export function DialogTitle({ children, className = '', ...props }) {
   );
 }
 
-// ← Add this stub:
 export function DialogDescription({ children, className = '', ...props }) {
   return (
     <p className={`text-sm leading-relaxed ${className}`} {...props}>
