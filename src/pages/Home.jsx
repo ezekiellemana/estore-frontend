@@ -1,9 +1,17 @@
+// src/pages/Home.jsx
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { motion } from 'framer-motion';
 import { FaStar } from 'react-icons/fa';
 import AnimatedButton from '../components/AnimatedButton';
+
+// Helper to format numbers like "2,250,000.00" and append "/="
+const formatPrice = (price) =>
+  `Tsh.${price.toLocaleString('en-TZ', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}/=`;
 
 // Skeleton loader for loading state
 function ProductCardSkeleton() {
@@ -33,7 +41,7 @@ function ProductCard({ product }) {
       scale: 1.03,
       transition: { duration: 0.3, ease: 'easeOut' },
     },
-    tap: { scale: 0.98 }
+    tap: { scale: 0.98 },
   };
 
   return (
@@ -76,15 +84,23 @@ function ProductCard({ product }) {
           <div className="mt-2 flex items-baseline space-x-2">
             {hasDiscount ? (
               <>
-                <span className="text-neutral-500 line-through">Tsh.{product.price.toFixed(2)}</span>
-                <span className="text-accent-600 font-semibold">Tsh.{discountedPrice.toFixed(2)}</span>
+                <span className="text-neutral-500 line-through text-sm">
+                  {formatPrice(product.price)}
+                </span>
+                <span className="text-accent-600 font-semibold text-sm">
+                  {formatPrice(discountedPrice)}
+                </span>
               </>
             ) : (
-              <span className="text-accent-600 font-semibold">Tsh.{product.price.toFixed(2)}</span>
+              <span className="text-accent-600 font-semibold text-sm">
+                {formatPrice(product.price)}
+              </span>
             )}
           </div>
 
-          <p className="mt-1 text-sm text-neutral-500">{product.category?.name || 'Uncategorized'}</p>
+          <p className="mt-1 text-sm text-neutral-500">
+            {product.category?.name || 'Uncategorized'}
+          </p>
 
           <div className="mt-2 flex items-center text-sm">
             <FaStar className="text-yellow-500 mr-1" />
@@ -98,7 +114,11 @@ function ProductCard({ product }) {
                 {product.discount}% OFF
               </span>
             )}
-            <span className={`inline-block px-3 py-1 text-xs font-medium rounded-full ${product.stock > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+            <span
+              className={`inline-block px-3 py-1 text-xs font-medium rounded-full ${
+                product.stock > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+              }`}
+            >
               {product.stock > 0 ? `In Stock (${product.stock})` : 'Out of Stock'}
             </span>
           </div>
@@ -172,13 +192,17 @@ export default function Home() {
         <h2 className="text-3xl font-semibold text-neutral-800">Featured Products</h2>
         {loadingFeatured ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {[...Array(4)].map((_, i) => <ProductCardSkeleton key={i} />)}
+            {[...Array(4)].map((_, i) => (
+              <ProductCardSkeleton key={i} />
+            ))}
           </div>
         ) : featured.length === 0 ? (
           <p className="text-center text-neutral-500">No featured products available.</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {featured.map((product) => <ProductCard key={product._id} product={product} />)}
+            {featured.map((product) => (
+              <ProductCard key={product._id} product={product} />
+            ))}
           </div>
         )}
       </section>
@@ -188,13 +212,17 @@ export default function Home() {
         <h2 className="text-3xl font-semibold text-neutral-800">Offers & Discounts</h2>
         {loadingOffers ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {[...Array(4)].map((_, i) => <ProductCardSkeleton key={i} />)}
+            {[...Array(4)].map((_, i) => (
+              <ProductCardSkeleton key={i} />
+            ))}
           </div>
         ) : offers.length === 0 ? (
           <p className="text-center text-neutral-500">No current offers available.</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {offers.map((product) => <ProductCard key={product._id} product={product} />)}
+            {offers.map((product) => (
+              <ProductCard key={product._id} product={product} />
+            ))}
           </div>
         )}
       </section>

@@ -1,16 +1,17 @@
+// src/components/ProductCard.jsx
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { FaStar } from 'react-icons/fa';
 
 export default function ProductCard({ product }) {
-  // Determine if there's a discount
+  // Check for a discount
   const hasDiscount = product.discount && product.discount > 0;
-  // Calculate discounted price
+  // Calculate the discounted price
   const discountedPrice = hasDiscount
     ? Math.round(product.price * (1 - product.discount / 100) * 100) / 100
     : product.price;
 
-  // Format price with thousand separators and precision, plus "/=" suffix
+  // Format numbers with thousand separators and two decimals, plus "/=" suffix
   const formatPrice = (price) =>
     `Tsh.${price.toLocaleString('en-TZ', {
       minimumFractionDigits: 2,
