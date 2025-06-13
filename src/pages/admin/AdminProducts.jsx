@@ -7,8 +7,7 @@ import { toast } from 'react-toastify';
 import AnimatedButton from '../../components/AnimatedButton';
 import { Trash2, Edit3 } from 'lucide-react';
 
-const CLOUDINARY_UPLOAD_URL =
-  'https://api.cloudinary.com/v1_1/dhubit7vj/upload';
+const CLOUDINARY_UPLOAD_URL = 'https://api.cloudinary.com/v1_1/dhubit7vj/upload';
 const UPLOAD_PRESET = 'estore';
 
 // Helper to format numbers like "Tsh.2,250,000.00/="
@@ -46,9 +45,7 @@ export default function AdminProducts() {
 
   const fetchProducts = async () => {
     try {
-      const { data } = await api.get('/api/products', {
-        params: { page: 1, limit: 1000 },
-      });
+      const { data } = await api.get('/api/products', { params: { page: 1, limit: 1000 } });
       setProducts(Array.isArray(data.products) ? data.products : []);
     } catch {
       toast.error('Failed to load products.');
@@ -68,11 +65,10 @@ export default function AdminProducts() {
   const cancelDeletion = () => setConfirmDeleteId(null);
 
   const handleDelete = async () => {
-    const id = confirmDeleteId;
-    if (!id) return;
-    setDeletingId(id);
+    if (!confirmDeleteId) return;
+    setDeletingId(confirmDeleteId);
     try {
-      await api.delete(`/api/products/${id}`);
+      await api.delete(`/api/products/${confirmDeleteId}`);
       toast.success('Product deleted.');
       fetchProducts();
     } catch {
@@ -134,13 +130,9 @@ export default function AdminProducts() {
     const body = new FormData();
     body.append('file', file);
     body.append('upload_preset', UPLOAD_PRESET);
-
     try {
       setUploadingIdx(slotIdx);
-      const res = await fetch(CLOUDINARY_UPLOAD_URL, {
-        method: 'POST',
-        body,
-      });
+      const res = await fetch(CLOUDINARY_UPLOAD_URL, { method: 'POST', body });
       const data = await res.json();
       if (data.error) throw new Error(data.error.message);
       return data.secure_url;
@@ -164,10 +156,8 @@ export default function AdminProducts() {
   };
 
   const toggleFeaturedInline = async (prod) => {
-    const flag = !prod.isFeatured;
     try {
-      await api.put(`/api/products/${prod._id}`, { isFeatured: flag });
-      toast.success(`Product ${flag ? 'marked' : 'unmarked'} as featured.`);
+      await api.put(`/api/products/${prod._id}`, { isFeatured: !prod.isFeatured });
       fetchProducts();
     } catch {
       toast.error('Failed to update status.');
@@ -180,7 +170,6 @@ export default function AdminProducts() {
       toast.error('Name, price, stock & category are required.');
       return;
     }
-
     const discount = Math.max(0, parseFloat(formData.discount) || 0);
     const payload = {
       ...formData,
@@ -224,27 +213,195 @@ export default function AdminProducts() {
           {editingProduct ? 'Edit Product' : 'Add New Product'}
         </h3>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* … same form fields … */}
-          {/* Submit */}
+          {/* Name */}
+          <div>
+            <label className="block text-sm font-medium text-neutral-700" htmlFor="name">
+              Name *
+            </label>
+            <input
+              id="name"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              required
+              className="mt-1 block w-full rounded-2xl border border-neutral-300 bg-neutral-50 px-3 py-2 shadow-inner focus:outline-none focus:ring-2 focus:ring-primary-300"
+            />
+          </div>
+          {/* Description */}
+          <div>
+            <label className="block text-sm font-medium text-neutral-700" htmlFor="description">
+              Description
+            </label>
+            <textarea
+              id="description"
+              name="description"
+              rows={3}
+              value={formData.description}
+              onChange={handleChange}
+              className="mt-1 block w-full rounded-2xl border border-neutral-300 bg-neutral-50 px-3 py-2 shadow-inner focus:outline-none focus:ring-2 focus:ring-primary-300 resize-none leading-relaxed"
+            />
+          </div>
+          {/* Price & Stock */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-neutral-700" htmlFor="price">
+                Price *
+              </label>
+              <input
+                id="price"
+                name="price"
+                type="number"
+                step="0.01"
+                value={formData.price}
+                onChange={handleChange}
+                required
+                className="mt-1 block w-full rounded-2xl border border-neutral-300 bg-neutral-50 px-3 py-2 shadow-inner focus:outline-none focus:ring-2 focus:ring-primary-300"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-neutral-700" htmlFor="stock">
+                Stock *
+              </label>
+              <input
+                id="stock"
+                name="stock"
+                type="number"
+                step="1"
+                value={formData.stock}
+                onChange={handleChange}
+                required
+                className="mt-1 block w-full rounded-2xl border border-neutral-300 bg-neutral-50 px-3 py-2 shadow-inner focus:outline-none focus:ring-2 focus:ring-primary-300"
+              />
+            </div>
+          </div>
+          {/* Category */}
+          <div>
+            <label className="block text-sm font-medium text-neutral-700" htmlFor="category">
+              Category *
+            </label>
+            <select
+              id="category"
+              name="category"
+              value={formData.category}
+              onChange={handleChange}
+              required
+              className="mt-1 block w-full rounded-2xl border border-neutral-300 bg-neutral-50 px-3 py-2 shadow-inner focus:outline-none focus:ring-2 focus:ring-primary-300"
+            >
+              <option value="">-- Select --</option>
+              {categories.map((cat) => (
+                <option key={cat._id} value={cat._id}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          {/* Discount & Featured */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-neutral-700" htmlFor="discount">
+                Discount %
+              </label>
+              <input
+                id="discount"
+                name="discount"
+                type="number"
+                step="0.01"
+                value={formData.discount}
+                onChange={handleChange}
+                placeholder="0"
+                className="mt-1 block w-full rounded-2xl border border-neutral-300 bg-neutral-50 px-3 py-2 shadow-inner focus:outline-none focus:ring-2 focus:ring-primary-300"
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <input
+                id="isFeatured"
+                name="isFeatured"
+                type="checkbox"
+                checked={formData.isFeatured}
+                onChange={handleChange}
+                className="h-4 w-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
+              />
+              <label className="text-sm font-medium text-neutral-700" htmlFor="isFeatured">
+                Featured
+              </label>
+            </div>
+          </div>
+          {/* Images */}
+          <div className="space-y-4">
+            <p className="text-sm font-medium text-neutral-700">Images</p>
+            {formData.images.map((url, idx) => (
+              <div key={idx} className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                {url ? (
+                  <img
+                    src={url}
+                    alt=""
+                    className="w-32 h-32 rounded-lg border border-neutral-200 object-cover"
+                  />
+                ) : (
+                  <div className="flex h-32 w-32 items-center justify-center rounded-lg border border-neutral-200 bg-neutral-100 text-neutral-400">
+                    No image
+                  </div>
+                )}
+                <div className="space-y-2">
+                  <label
+                    htmlFor={`file-input-${idx}`}
+                    className="inline-flex cursor-pointer items-center rounded-2xl bg-primary-600 px-4 py-2 text-white hover:bg-primary-700"
+                  >
+                    {uploadingIdx === idx
+                      ? 'Uploading…'
+                      : url
+                      ? 'Change File'
+                      : 'Choose File'}
+                    <input
+                      id={`file-input-${idx}`}
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleFileInput(e, idx)}
+                      className="hidden"
+                      disabled={uploadingIdx === idx}
+                    />
+                  </label>
+                  <input
+                    name="images"
+                    value={url}
+                    onChange={(e) => handleChange(e, idx)}
+                    placeholder="Paste URL"
+                    className="mt-1 block w-full rounded-2xl border border-neutral-300 bg-neutral-50 px-3 py-2 shadow-inner focus:outline-none focus:ring-2 focus:ring-primary-300"
+                  />
+                </div>
+                {formData.images.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeImageField(idx)}
+                    className="self-start text-red-500 hover:text-red-700"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={addImageField}
+              className="text-accent-500 hover:underline text-sm"
+            >
+              + Add slot
+            </button>
+          </div>
+          {/* Submit & Cancel */}
           <div className="flex space-x-4 mt-4">
             <AnimatedButton
               type="submit"
               disabled={loading || uploadingIdx !== null}
               className="px-6 py-2"
             >
-              {editingProduct
-                ? loading
-                  ? 'Updating…'
-                  : 'Update'
-                : loading
-                ? 'Creating…'
-                : 'Create'}
+              {editingProduct ? (loading ? 'Updating…' : 'Update') : loading ? 'Creating…' : 'Create'}
             </AnimatedButton>
             {editingProduct && (
               <button
                 type="button"
                 onClick={resetForm}
-                className="px-6 py-2 border border-neutral-300 rounded-2xl text-neutral-700 hover:bg-neutral-100"
+                className="rounded-2xl border border-neutral-300 px-6 py-2 text-neutral-700 hover:bg-neutral-100"
               >
                 Cancel
               </button>
@@ -255,9 +412,9 @@ export default function AdminProducts() {
 
       {/* Products Table */}
       <div className="bg-white rounded-2xl shadow-card overflow-x-auto p-6 lg:p-8">
-        <h3 className="text-xl font-medium mb-4 text-neutral-800">All Products</h3>
-        {products.length ? (
-          <table className="min-w-full bg-transparent">
+        <h3 className="text-xl font-medium text-neutral-800 mb-4">All Products</h3>
+        {products.length > 0 ? (
+          <table className="min-w-full">
             <thead className="bg-neutral-100">
               <tr>
                 <th className="px-4 py-2 text-left text-sm font-medium">Name</th>
@@ -266,9 +423,9 @@ export default function AdminProducts() {
                 <th className="px-4 py-2 text-right text-sm font-medium">Disc. Price</th>
                 <th className="px-4 py-2 text-center text-sm font-medium">Stock</th>
                 <th className="px-4 py-2 text-left text-sm font-medium">Category</th>
-                <th className="px-4 py-2 text-center text-sm font-medium">Featured</th>
+                <th className="px-4 py-2 text-center text-sm font-medium">Feat.</th>
                 <th className="px-4 py-2 text-left text-sm font-medium">Images</th>
-                <th className="px-4 py-2 text-left text-sm font-medium">Description</th>
+                <th className="px-4 py-2 text-left text-sm font-medium">Desc.</th>
                 <th className="px-4 py-2 text-center text-sm font-medium">Actions</th>
               </tr>
             </thead>
@@ -276,7 +433,7 @@ export default function AdminProducts() {
               {products.map((prod, i) => {
                 const price = parseFloat(prod.price) || 0;
                 const disc = Math.max(0, parseFloat(prod.discount) || 0);
-                const finalPrice = Math.round(((price * (100 - disc)) / 100) * 100) / 100;
+                const finalP = Math.round(((price * (100 - disc)) / 100) * 100) / 100;
                 return (
                   <motion.tr
                     key={prod._id}
@@ -288,18 +445,11 @@ export default function AdminProducts() {
                     <td className="px-4 py-2">{prod.name}</td>
                     <td className="px-4 py-2 text-right">{formatPrice(price)}</td>
                     <td className="px-4 py-2 text-right">{disc.toFixed(2)}%</td>
-                    <td className="px-4 py-2 text-right font-semibold">
-                      {formatPrice(finalPrice)}
-                    </td>
+                    <td className="px-4 py-2 text-right font-semibold">{formatPrice(finalP)}</td>
                     <td className="px-4 py-2 text-center">{prod.stock}</td>
                     <td className="px-4 py-2">{prod.category?.name || '—'}</td>
                     <td className="px-4 py-2 text-center">
-                      <button
-                        onClick={() => toggleFeaturedInline(prod)}
-                        className={`text-xl ${
-                          prod.isFeatured ? 'text-yellow-500' : 'text-neutral-300'
-                        }`}
-                      >
+                      <button onClick={() => toggleFeaturedInline(prod)}>
                         {prod.isFeatured ? '★' : '☆'}
                       </button>
                     </td>
@@ -311,14 +461,10 @@ export default function AdminProducts() {
                               key={idx}
                               src={u}
                               alt=""
-                              className="w-8 h-8 object-cover rounded"
+                              className="h-8 w-8 rounded object-cover"
                             />
                           ))}
-                          {prod.images.length > 3 && (
-                            <span className="text-sm text-neutral-500">
-                              +{prod.images.length - 3}
-                            </span>
-                          )}
+                          {prod.images.length > 3 && <span>+{prod.images.length - 3}</span>}
                         </div>
                       ) : (
                         '—'
@@ -359,20 +505,18 @@ export default function AdminProducts() {
                 exit={{ scale: 0.8 }}
                 className="bg-white rounded-2xl p-6 w-80 text-center shadow-lg"
               >
-                <p className="text-neutral-800 mb-4">
-                  Are you sure you want to delete this product?
-                </p>
+                <p className="mb-4 text-neutral-800">Delete this product?</p>
                 <div className="flex justify-center space-x-4">
                   <button
                     onClick={cancelDeletion}
-                    className="px-4 py-2 bg-neutral-200 rounded-2xl hover:bg-neutral-300"
+                    className="rounded-2xl bg-neutral-200 px-4 py-2 hover:bg-neutral-300"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleDelete}
                     disabled={deletingId === confirmDeleteId}
-                    className="px-4 py-2 bg-red-500 text-white rounded-2xl hover:bg-red-600"
+                    className="rounded-2xl bg-red-500 px-4 py-2 text-white hover:bg-red-600"
                   >
                     {deletingId === confirmDeleteId ? 'Deleting…' : 'Delete'}
                   </button>
@@ -383,5 +527,5 @@ export default function AdminProducts() {
           document.body
         )}
     </div>
-  );
+);
 }
