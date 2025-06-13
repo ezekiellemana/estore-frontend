@@ -3,8 +3,9 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaStar, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import AnimatedButton from '../components/AnimatedButton';
+import ProductCard from '../components/ProductCard';
 
 // Helper to format prices like "Tsh.2,250,000.00/="
 const formatPrice = (price) =>
@@ -26,124 +27,29 @@ function ProductCardSkeleton() {
   );
 }
 
-// Product card
-function ProductCard({ product }) {
-  const hasDiscount = product.discount > 0;
-  const discountedPrice = hasDiscount
-    ? Math.round(product.price * (1 - product.discount / 100) * 100) / 100
-    : product.price;
-
-  return (
-    <Link to={`/products/${product._id}`} className="block group">
-      <motion.div
-        whileHover={{ scale: 1.03 }}
-        whileTap={{ scale: 0.97 }}
-        className="bg-white rounded-2xl shadow-lg p-4 flex flex-col h-full transition"
-      >
-        {/* Image + badges */}
-        <div className="relative overflow-hidden rounded-lg">
-          {hasDiscount && (
-            <span className="absolute top-2 right-2 bg-accent-600 text-white text-xs px-2 py-1 rounded-full z-10">
-              {product.discount}% OFF
-            </span>
-          )}
-          {product.images?.[0] ? (
-            <img
-              src={product.images[0]}
-              alt={product.name}
-              className="w-full h-48 object-cover"
-            />
-          ) : (
-            <div className="w-full h-48 bg-neutral-100 flex items-center justify-center">
-              <span className="text-neutral-400">No Image</span>
-            </div>
-          )}
-        </div>
-
-        {/* Content */}
-        <div className="mt-4 flex flex-col flex-grow">
-          <h3 className="text-lg font-medium text-neutral-800 group-hover:text-accent-600 transition line-clamp-2">
-            {product.name}
-          </h3>
-
-          <div className="mt-2 flex items-baseline space-x-2">
-            {hasDiscount ? (
-              <>
-                <span className="text-neutral-500 line-through text-sm">
-                  {formatPrice(product.price)}
-                </span>
-                <span className="text-accent-600 font-semibold text-sm">
-                  {formatPrice(discountedPrice)}
-                </span>
-              </>
-            ) : (
-              <span className="text-accent-600 font-semibold text-sm">
-                {formatPrice(product.price)}
-              </span>
-            )}
-          </div>
-
-          <p className="mt-1 text-sm text-neutral-500">
-            {product.category?.name || 'Uncategorized'}
-          </p>
-
-          <div className="mt-2 flex items-center text-sm">
-            <FaStar className="text-yellow-500 mr-1" />
-            <span className="text-neutral-700">
-              {(product.avgRating ?? 0).toFixed(1)}
-            </span>
-            <span className="ml-2 text-neutral-500">
-              ({product.totalReviews ?? 0})
-            </span>
-          </div>
-
-          <div className="mt-auto pt-4 flex justify-between items-center">
-            {hasDiscount && (
-              <span className="inline-block px-2 py-1 bg-accent-100 text-accent-700 text-xs font-medium rounded-full">
-                {product.discount}% OFF
-              </span>
-            )}
-            <span
-              className={`inline-block px-3 py-1 text-xs font-medium rounded-full ${
-                product.stock > 0
-                  ? 'bg-green-100 text-green-700'
-                  : 'bg-red-100 text-red-700'
-              }`}
-            >
-              {product.stock > 0
-                ? `In Stock (${product.stock})`
-                : 'Out of Stock'}
-            </span>
-          </div>
-        </div>
-      </motion.div>
-    </Link>
-  );
-}
-
 export default function Home() {
   const [featured, setFeatured] = useState([]);
   const [offers, setOffers] = useState([]);
   const [loadingFeatured, setLoadingFeatured] = useState(true);
   const [loadingOffers, setLoadingOffers] = useState(true);
 
-  const offersRef = useRef([]);
   const carouselRef = useRef(null);
+  const offersRef = useRef([]);
   const [isPaused, setIsPaused] = useState(false);
 
-  // Fetch data
+  // Fetch featured & offers
   useEffect(() => {
     api
       .get('/api/products', { params: { sort: 'createdAt_desc', limit: 4 } })
-      .then((r) => setFeatured(r.data.products || []))
+      .then(r => setFeatured(r.data.products || []))
       .catch(() => setFeatured([]))
       .finally(() => setLoadingFeatured(false));
 
     api
       .get('/api/products', { params: { discounted: true, limit: 8 } })
-      .then((r) => {
+      .then(r => {
         const arr = r.data.products || [];
-        // shuffle
+        // shuffle for randomness
         for (let i = arr.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1));
           [arr[i], arr[j]] = [arr[j], arr[i]];
@@ -155,24 +61,39 @@ export default function Home() {
       .finally(() => setLoadingOffers(false));
   }, []);
 
-  // Auto-swipe every 3s
+  // Auto‐advance carousel every 3s
   useEffect(() => {
-    if (offersRef.current.length <= 4) return;
+    if (!carouselRef.current || offersRef.current.length <= 4) return;
     const iv = setInterval(() => {
-      if (!isPaused && carouselRef.current) {
-        carouselRef.current.scrollBy({ left: carouselRef.current.offsetWidth, behavior: 'smooth' });
-        // wrap around
-        if (carouselRef.current.scrollLeft + carouselRef.current.offsetWidth >= carouselRef.current.scrollWidth) {
-          carouselRef.current.scrollTo({ left: 0, behavior: 'smooth' });
-        }
+      if (isPaused) return;
+      const el = carouselRef.current;
+      const nextScroll = el.scrollLeft + el.offsetWidth;
+      if (nextScroll + 1 >= el.scrollWidth) {
+        el.scrollTo({ left: 0, behavior: 'smooth' });
+      } else {
+        el.scrollBy({ left: el.offsetWidth, behavior: 'smooth' });
       }
     }, 3000);
     return () => clearInterval(iv);
   }, [isPaused]);
 
+  // Handlers for manual nav
+  const scrollPrev = () => {
+    const el = carouselRef.current;
+    if (!el) return;
+    const prev = el.scrollLeft - el.offsetWidth;
+    el.scrollTo({ left: prev < 0 ? el.scrollWidth : prev, behavior: 'smooth' });
+  };
+  const scrollNext = () => {
+    const el = carouselRef.current;
+    if (!el) return;
+    const next = el.scrollLeft + el.offsetWidth;
+    el.scrollTo({ left: next >= el.scrollWidth ? 0 : next, behavior: 'smooth' });
+  };
+
   return (
     <div className="space-y-20">
-      {/* Hero Section */}
+      {/* Hero */}
       <section className="relative bg-gradient-to-r from-primary-100 to-primary-50 py-20 rounded-2xl shadow-card overflow-hidden">
         <div className="absolute inset-0 opacity-10 bg-[url('/hero-bg.svg')] bg-center bg-no-repeat" />
         <div className="relative max-w-3xl mx-auto text-center px-6 space-y-6">
@@ -182,7 +103,7 @@ export default function Home() {
           <p className="text-xl sm:text-2xl text-primary-600">
             Discover our most popular products with exclusive deals and free shipping.
           </p>
-          <Link to="/products" aria-label="Browse all products">
+          <Link to="/products">
             <motion.div whileHover={{ scale: 1.05 }} transition={{ duration: 0.3 }}>
               <AnimatedButton className="px-10 py-3 text-lg bg-gradient-to-r from-accent-500 to-accent-700 text-white font-semibold rounded-2xl shadow-lg hover:shadow-xl transition">
                 Browse Products
@@ -197,49 +118,61 @@ export default function Home() {
         <h2 className="text-3xl font-semibold text-neutral-800">Featured Products</h2>
         {loadingFeatured ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {[...Array(4)].map((_, i) => (
-              <ProductCardSkeleton key={i} />
-            ))}
+            {[...Array(4)].map((_, i) => <ProductCardSkeleton key={i} />)}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {featured.length > 0 ? (
-              featured.map((p) => <ProductCard key={p._id} product={p} />)
-            ) : (
-              <p className="col-span-4 text-center text-neutral-500">No featured products.</p>
-            )}
+            {featured.length
+              ? featured.map(p => <ProductCard key={p._id} product={p} />)
+              : <p className="col-span-4 text-center text-neutral-500">No featured products.</p>}
           </div>
         )}
       </section>
 
-      {/* Offers & Discounts */}
+      {/* Offers & Discounts Carousel */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
         <h2 className="text-3xl font-semibold text-neutral-800">Offers & Discounts</h2>
-        <div
-          className="relative"
-          onMouseEnter={() => setIsPaused(true)}
-          onMouseLeave={() => setIsPaused(false)}
-        >
-          {loadingOffers ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-              {[...Array(4)].map((_, i) => (
-                <ProductCardSkeleton key={i} />
-              ))}
-            </div>
-          ) : offers.length > 0 ? (
-            <div className="overflow-x-auto snap-x snap-mandatory" ref={carouselRef}>
+        {loadingOffers ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            {[...Array(4)].map((_, i) => <ProductCardSkeleton key={i} />)}
+          </div>
+        ) : offers.length ? (
+          <div
+            className="relative"
+            onMouseEnter={() => setIsPaused(true)}
+            onMouseLeave={() => setIsPaused(false)}
+          >
+            {/* Carousel viewport */}
+            <div
+              className="overflow-x-auto snap-x snap-mandatory scroll-smooth"
+              ref={carouselRef}
+            >
               <div className="inline-flex gap-6 px-4 sm:px-0">
-                {offers.map((p) => (
+                {offers.map(p => (
                   <div key={p._id} className="snap-start flex-shrink-0 w-[240px] md:w-auto">
                     <ProductCard product={p} />
                   </div>
                 ))}
               </div>
             </div>
-          ) : (
-            <p className="text-center text-neutral-500">No current offers.</p>
-          )}
-        </div>
+
+            {/* Nav arrows (desktop only) */}
+            <button
+              onClick={scrollPrev}
+              className="hidden md:flex absolute left-2 top-1/2 transform -translate-y-1/2 bg-white p-2 rounded-full shadow hover:bg-neutral-100"
+            >
+              <FaChevronLeft />
+            </button>
+            <button
+              onClick={scrollNext}
+              className="hidden md:flex absolute right-2 top-1/2 transform -translate-y-1/2 bg-white p-2 rounded-full shadow hover:bg-neutral-100"
+            >
+              <FaChevronRight />
+            </button>
+          </div>
+        ) : (
+          <p className="text-center text-neutral-500">No current offers.</p>
+        )}
       </section>
     </div>
   );
