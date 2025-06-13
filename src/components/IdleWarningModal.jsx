@@ -1,41 +1,99 @@
 // src/components/IdleWarningModal.jsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
-  Dialog, DialogContent, DialogHeader,
-  DialogTitle, DialogDescription, DialogFooter,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import useAuthStore from '../store/useAuthStore';
 
-export default function IdleWarningModal({ isOpen, onStayLoggedIn, onForceLogout, warningDurationSec = 60 }) {
-  const [sec, setSec] = useState(warningDurationSec);
+export default function IdleWarningModal({
+  isOpen,
+  onStayLoggedIn,
+  onForceLogout,
+  warningDurationSec = 60,
+}) {
+  const [secondsLeft, setSecondsLeft] = useState(warningDurationSec);
+  const intervalRef = useRef(null);
+
+  // pull skip flag from persistent auth store
   const skip = useAuthStore((s) => s.skipIdleWarning);
   const setSkip = useAuthStore((s) => s.setSkipIdleWarning);
 
+  // reset countdown each time it opens
   useEffect(() => {
     if (!isOpen) return;
-    setSec(warningDurationSec);
-    const iv = setInterval(() => {
-      setSec((s) => (s <= 1 ? (clearInterval(iv), onForceLogout(), 0) : s - 1));
+
+    setSecondsLeft(warningDurationSec);
+    clearInterval(intervalRef.current);
+
+    intervalRef.current = setInterval(() => {
+      setSecondsLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(intervalRef.current);
+          onForceLogout();
+          return 0;
+        }
+        return prev - 1;
+      });
     }, 1000);
-    return () => clearInterval(iv);
+
+    return () => clearInterval(intervalRef.current);
   }, [isOpen, warningDurationSec, onForceLogout]);
 
+  // handler for “Stay Logged In”
+  const handleStay = useCallback(() => {
+    clearInterval(intervalRef.current);
+    onStayLoggedIn();
+  }, [onStayLoggedIn]);
+
   if (!isOpen || skip) return null;
+
+  // compute progress bar width
+  const progressPct = (secondsLeft / warningDurationSec) * 100;
+
   return (
-    <Dialog open={isOpen} onOpenChange={(o) => !o && onStayLoggedIn()}>
-      <DialogContent>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleStay()}>
+      <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>Session Expiring Soon</DialogTitle>
-          <DialogDescription>You’ll be logged out in <strong>{sec}</strong> second{sec !== 1 && 's'}.</DialogDescription>
+          <DialogTitle className="text-lg">Session Expiring Soon</DialogTitle>
+          <DialogDescription className="mt-2">
+            You’ll be logged out in{' '}
+            <strong className="font-mono">{secondsLeft}s</strong>
+          </DialogDescription>
         </DialogHeader>
-        <div className="flex items-center mb-4">
-          <input id="skip" type="checkbox" checked={skip} onChange={(e) => setSkip(e.target.checked)} className="mr-2" />
-          <label htmlFor="skip" className="text-sm">Don’t show again</label>
+
+        {/* visual countdown bar */}
+        <div className="w-full h-2 bg-neutral-200 rounded-full overflow-hidden my-4">
+          <div
+            className="h-full bg-primary-500 transition-all"
+            style={{ width: `${progressPct}%` }}
+          />
         </div>
+
+        {/* “Don't show again” */}
+        <div className="flex items-center mb-6">
+          <input
+            id="skip-warning"
+            type="checkbox"
+            checked={skip}
+            onChange={(e) => setSkip(e.target.checked)}
+            className="mr-2"
+          />
+          <label htmlFor="skip-warning" className="text-sm">
+            Don’t show again
+          </label>
+        </div>
+
         <DialogFooter className="flex justify-end space-x-2">
-          <Button variant="outline" onClick={onForceLogout}>Logout Now</Button>
-          <Button onClick={onStayLoggedIn}>Stay Logged In</Button>
+          <Button variant="outline" onClick={onForceLogout}>
+            Logout Now
+          </Button>
+          <Button onClick={handleStay}>Stay Logged In</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
