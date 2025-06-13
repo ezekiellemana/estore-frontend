@@ -8,17 +8,17 @@ import { toast } from 'react-toastify';
 import AnimatedButton from '../components/AnimatedButton';
 
 export default function Cart() {
-  const [cart, setCart] = useState(null);
+  const [cart, setCart] = useState({ items: [] });   // <<< default to empty items
   const [loading, setLoading] = useState(true);
   const [updatingItemId, setUpdatingItemId] = useState(null);
   const navigate = useNavigate();
 
-  // 1) Fetch cart from backend
+  // Fetch cart
   const fetchCart = async () => {
     setLoading(true);
     try {
       const { data } = await api.get('/api/cart');
-      setCart(data);
+      setCart(data ?? { items: [] });
     } catch (err) {
       console.error('Failed to load cart:', err);
       toast.error('Could not load cart.');
@@ -31,42 +31,33 @@ export default function Cart() {
     fetchCart();
   }, []);
 
-  // 2) Calculate subtotal using discounted prices
-  const subtotal = cart
-    ? cart.items.reduce((sum, item) => {
-        const price = item.product.discount > 0
-          ? item.product.price * (1 - item.product.discount / 100)
-          : item.product.price;
-        return sum + price * item.quantity;
-      }, 0)
-    : 0;
+  // Calculate subtotal (guard discount & price)
+  const subtotal = cart.items.reduce((sum, item) => {
+    const price = item.product?.price ?? 0;
+    const discountPct = item.product?.discount ?? 0;
+    const discountedPrice = discountPct > 0
+      ? price * (1 - discountPct / 100)
+      : price;
+    return sum + discountedPrice * (item.quantity ?? 0);
+  }, 0);
 
-  // 3) Handle quantity change: delete + re‐add with new quantity
+  // Update quantity
   const handleQtyChange = async (productId, newQty) => {
-    if (!cart) return;
     setUpdatingItemId(productId);
     try {
-      // 3a) Remove existing item
       await api.delete(`/api/cart/${productId}`);
-
-      // 3b) Re‐add with new quantity
-      await api.post('/api/cart', {
-        productId,
-        quantity: newQty,
-      });
-
+      await api.post('/api/cart', { productId, quantity: newQty });
       toast.success('Quantity updated.');
       await fetchCart();
     } catch (err) {
       console.error('Failed to update quantity:', err);
       toast.error('Could not update quantity.');
-      setUpdatingItemId(null);
     } finally {
       setUpdatingItemId(null);
     }
   };
 
-  // 4) Handle removal
+  // Remove item
   const handleRemove = async (productId) => {
     setUpdatingItemId(productId);
     try {
@@ -76,15 +67,14 @@ export default function Cart() {
     } catch (err) {
       console.error('Failed to remove item:', err);
       toast.error('Could not remove item.');
-      setUpdatingItemId(null);
     } finally {
       setUpdatingItemId(null);
     }
   };
 
-  // 5) Proceed to checkout
+  // Checkout
   const handleCheckout = () => {
-    if (!cart || cart.items.length === 0) {
+    if (cart.items.length === 0) {
       toast.error('Your cart is empty.');
       return;
     }
@@ -99,7 +89,7 @@ export default function Cart() {
     );
   }
 
-  if (!cart || cart.items.length === 0) {
+  if (cart.items.length === 0) {
     return (
       <div className="space-y-8">
         <h2 className="text-2xl font-bold text-neutral-800">Shopping Cart</h2>
@@ -121,36 +111,38 @@ export default function Cart() {
         {/* Cart Items List */}
         <div className="md:col-span-2 space-y-4">
           {cart.items.map((item, idx) => {
-            const discountedPrice = item.product.discount > 0
-              ? item.product.price * (1 - item.product.discount / 100)
-              : item.product.price;
+            const price = item.product?.price ?? 0;
+            const discountPct = item.product?.discount ?? 0;
+            const discountedPrice = discountPct > 0
+              ? price * (1 - discountPct / 100)
+              : price;
 
             return (
               <motion.div
-                key={item.product._id}
+                key={item.product?._id ?? idx}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.05 }}
                 className="flex items-center bg-white rounded-2xl shadow-card p-4"
               >
                 <img
-                  src={item.product.images?.[0] || '/placeholder.png'}
-                  alt={item.product.name}
+                  src={item.product?.images?.[0] || '/placeholder.png'}
+                  alt={item.product?.name ?? 'Product'}
                   className="w-24 h-24 object-cover rounded-xl"
                 />
 
                 <div className="ml-4 flex-1">
                   <Link
-                    to={`/products/${item.product._id}`}
+                    to={`/products/${item.product?._id}`}
                     className="font-medium text-neutral-800 hover:underline"
                   >
-                    {item.product.name}
+                    {item.product?.name ?? 'Unnamed Product'}
                   </Link>
                   <p className="text-neutral-600">
                     Tsh.{discountedPrice.toFixed(2)}
-                    {item.product.discount > 0 && (
+                    {discountPct > 0 && (
                       <span className="ml-2 text-sm text-neutral-500 line-through">
-                        Tsh.{item.product.price.toFixed(2)}
+                        Tsh.{price.toFixed(2)}
                       </span>
                     )}
                   </p>
@@ -160,12 +152,12 @@ export default function Cart() {
                     <select
                       value={item.quantity}
                       onChange={(e) =>
-                        handleQtyChange(item.product._id, Number(e.target.value))
+                        handleQtyChange(item.product?._id, Number(e.target.value))
                       }
-                      disabled={updatingItemId === item.product._id}
+                      disabled={updatingItemId === item.product?._id}
                       className="border border-neutral-300 rounded-2xl px-3 py-2 bg-neutral-50 shadow-inner focus:outline-none focus:ring-2 focus:ring-primary-300"
                     >
-                      {[...Array(item.product.stock).keys()].map((x) => (
+                      {[...Array(item.product?.stock ?? 1).keys()].map((x) => (
                         <option key={x + 1} value={x + 1}>
                           {x + 1}
                         </option>
@@ -175,8 +167,8 @@ export default function Cart() {
                 </div>
 
                 <button
-                  onClick={() => handleRemove(item.product._id)}
-                  disabled={updatingItemId === item.product._id}
+                  onClick={() => handleRemove(item.product?._id)}
+                  disabled={updatingItemId === item.product?._id}
                   className="text-red-500 hover:text-red-700 focus:outline-none ml-4"
                 >
                   Remove
