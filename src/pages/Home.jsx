@@ -13,7 +13,7 @@ const formatPrice = (price) =>
     maximumFractionDigits: 2,
   })}/=`;
 
-// Skeleton loader for loading state
+// Skeleton loader
 function ProductCardSkeleton() {
   return (
     <div className="bg-white rounded-2xl shadow-lg p-4 animate-pulse flex flex-col h-full">
@@ -135,10 +135,11 @@ export default function Home() {
   const [loadingOffers, setLoadingOffers] = useState(true);
 
   useEffect(() => {
+    // Fetch most recently uploaded featured products
     const fetchFeatured = async () => {
       try {
         const { data } = await api.get('/api/products', {
-          params: { sort: 'rating_desc', limit: 4 },
+          params: { sort: 'createdAt_desc', limit: 4 },
         });
         setFeatured(data.products || []);
       } catch {
@@ -148,10 +149,11 @@ export default function Home() {
       }
     };
 
+    // Fetch most recently uploaded discounted products
     const fetchOffers = async () => {
       try {
         const { data } = await api.get('/api/products', {
-          params: { discounted: true, sort: 'discount_desc', limit: 4 },
+          params: { discounted: true, sort: 'createdAt_desc', limit: 4 },
         });
         setOffers(data.products || []);
       } catch {
