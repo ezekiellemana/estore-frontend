@@ -40,6 +40,7 @@ function ProductCard({ product }) {
         whileTap={{ scale: 0.97 }}
         className="bg-white rounded-2xl shadow-lg p-4 flex flex-col h-full transition"
       >
+        {/* Image + badges */}
         <div className="relative overflow-hidden rounded-lg">
           {hasDiscount && (
             <span className="absolute top-2 right-2 bg-accent-600 text-white text-xs px-2 py-1 rounded-full z-10">
@@ -58,10 +59,13 @@ function ProductCard({ product }) {
             </div>
           )}
         </div>
+
+        {/* Content */}
         <div className="mt-4 flex flex-col flex-grow">
-          <h3 className="text-lg font-medium text-neutral-800 group-hover:text-accent-600 transition">
+          <h3 className="text-lg font-medium text-neutral-800 group-hover:text-accent-600 transition line-clamp-2">
             {product.name}
           </h3>
+
           <div className="mt-2 flex items-baseline space-x-2">
             {hasDiscount ? (
               <>
@@ -78,9 +82,11 @@ function ProductCard({ product }) {
               </span>
             )}
           </div>
+
           <p className="mt-1 text-sm text-neutral-500">
             {product.category?.name || 'Uncategorized'}
           </p>
+
           <div className="mt-2 flex items-center text-sm">
             <FaStar className="text-yellow-500 mr-1" />
             <span className="text-neutral-700">
@@ -90,6 +96,7 @@ function ProductCard({ product }) {
               ({product.totalReviews ?? 0})
             </span>
           </div>
+
           <div className="mt-auto pt-4 flex justify-between items-center">
             {hasDiscount && (
               <span className="inline-block px-2 py-1 bg-accent-100 text-accent-700 text-xs font-medium rounded-full">
@@ -121,7 +128,7 @@ export default function Home() {
   const [loadingOffers, setLoadingOffers] = useState(true);
 
   const offersRef = useRef([]);
-  const [index, setIndex] = useState(0);
+  const carouselRef = useRef(null);
   const [isPaused, setIsPaused] = useState(false);
 
   // Fetch data
@@ -148,30 +155,20 @@ export default function Home() {
       .finally(() => setLoadingOffers(false));
   }, []);
 
-  // Auto-swipe
+  // Auto-swipe every 3s
   useEffect(() => {
     if (offersRef.current.length <= 4) return;
     const iv = setInterval(() => {
-      if (!isPaused) goNext();
+      if (!isPaused && carouselRef.current) {
+        carouselRef.current.scrollBy({ left: carouselRef.current.offsetWidth, behavior: 'smooth' });
+        // wrap around
+        if (carouselRef.current.scrollLeft + carouselRef.current.offsetWidth >= carouselRef.current.scrollWidth) {
+          carouselRef.current.scrollTo({ left: 0, behavior: 'smooth' });
+        }
+      }
     }, 3000);
     return () => clearInterval(iv);
-  }, [index, isPaused]);
-
-  const goPrev = () => {
-    const len = offersRef.current.length;
-    const next = (index - 1 + len) % len;
-    setIndex(next);
-    const slice = offersRef.current;
-    setOffers([...slice.slice(next, next + 4), ...slice.slice(0, Math.max(0, next + 4 - len))]);
-  };
-
-  const goNext = () => {
-    const len = offersRef.current.length;
-    const next = (index + 1) % len;
-    setIndex(next);
-    const slice = offersRef.current;
-    setOffers([...slice.slice(next, next + 4), ...slice.slice(0, Math.max(0, next + 4 - len))]);
-  };
+  }, [isPaused]);
 
   return (
     <div className="space-y-20">
@@ -183,8 +180,7 @@ export default function Home() {
             Welcome to eStore
           </h1>
           <p className="text-xl sm:text-2xl text-primary-600">
-            Discover our most popular products with exclusive deals and free
-            shipping.
+            Discover our most popular products with exclusive deals and free shipping.
           </p>
           <Link to="/products" aria-label="Browse all products">
             <motion.div whileHover={{ scale: 1.05 }} transition={{ duration: 0.3 }}>
@@ -198,9 +194,7 @@ export default function Home() {
 
       {/* Featured Products */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-        <h2 className="text-3xl font-semibold text-neutral-800">
-          Featured Products
-        </h2>
+        <h2 className="text-3xl font-semibold text-neutral-800">Featured Products</h2>
         {loadingFeatured ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {[...Array(4)].map((_, i) => (
@@ -208,31 +202,21 @@ export default function Home() {
             ))}
           </div>
         ) : (
-          <div className="overflow-x-auto sm:overflow-visible snap-x snap-mandatory">
-            <div className="inline-flex space-x-6 px-4 sm:px-0 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:gap-8">
-              {featured.length ? (
-                featured.map((p) => (
-                  <div key={p._id} className="snap-start flex-shrink-0 sm:flex-shrink pt-0">
-                    <ProductCard product={p} />
-                  </div>
-                ))
-              ) : (
-                <p className="text-center text-neutral-500 col-span-4">
-                  No featured products.
-                </p>
-              )}
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            {featured.length > 0 ? (
+              featured.map((p) => <ProductCard key={p._id} product={p} />)
+            ) : (
+              <p className="col-span-4 text-center text-neutral-500">No featured products.</p>
+            )}
           </div>
         )}
       </section>
 
       {/* Offers & Discounts */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-        <h2 className="text-3xl font-semibold text-neutral-800">
-          Offers & Discounts
-        </h2>
+        <h2 className="text-3xl font-semibold text-neutral-800">Offers & Discounts</h2>
         <div
-          className="relative overflow-hidden"
+          className="relative"
           onMouseEnter={() => setIsPaused(true)}
           onMouseLeave={() => setIsPaused(false)}
         >
@@ -242,41 +226,16 @@ export default function Home() {
                 <ProductCardSkeleton key={i} />
               ))}
             </div>
-          ) : offers.length ? (
-            <>
-              <AnimatePresence initial={false} exitBeforeEnter>
-                <motion.div
-                  key={index}
-                  initial={{ x: '100%' }}
-                  animate={{ x: 0 }}
-                  exit={{ x: '-100%' }}
-                  transition={{ duration: 0.5 }}
-                  className="overflow-x-auto sm:overflow-visible snap-x snap-mandatory"
-                >
-                  <div className="inline-flex space-x-6 px-4 sm:px-0 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:gap-8">
-                    {offers.map((p) => (
-                      <div key={p._id} className="snap-start flex-shrink-0 sm:flex-shrink">
-                        <ProductCard product={p} />
-                      </div>
-                    ))}
+          ) : offers.length > 0 ? (
+            <div className="overflow-x-auto snap-x snap-mandatory" ref={carouselRef}>
+              <div className="inline-flex gap-6 px-4 sm:px-0">
+                {offers.map((p) => (
+                  <div key={p._id} className="snap-start flex-shrink-0 w-[240px] md:w-auto">
+                    <ProductCard product={p} />
                   </div>
-                </motion.div>
-              </AnimatePresence>
-
-              {/* Navigation arrows */}
-              <button
-                onClick={goPrev}
-                className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white p-2 rounded-full shadow hover:bg-neutral-100"
-              >
-                <FaChevronLeft />
-              </button>
-              <button
-                onClick={goNext}
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white p-2 rounded-full shadow hover:bg-neutral-100"
-              >
-                <FaChevronRight />
-              </button>
-            </>
+                ))}
+              </div>
+            </div>
           ) : (
             <p className="text-center text-neutral-500">No current offers.</p>
           )}
