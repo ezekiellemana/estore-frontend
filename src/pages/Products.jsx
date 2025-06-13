@@ -30,42 +30,28 @@ function ProductGridSkeleton({ count = 12 }) {
 export default function Products() {
   const [searchParams, setSearchParams] = useSearchParams();
 
+  // URL-driven
+  const categoryId = searchParams.get('category') || '';
+  const [searchInput, setSearchInput] = useState(searchParams.get('search') || '');
+
   // Product list + pagination
   const [products, setProducts] = useState([]);
   const [pages, setPages] = useState(1);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
 
-  // Filter & sort state
-  const [searchInput, setSearchInput] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
+  // Filter & sort UI
   const [categoryOptions, setCategoryOptions] = useState([]);
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState(categoryId);
 
-  // Initialize selectedCategory from URL param
-  const initialCategory = searchParams.get('category') || '';
-  const [selectedCategory, setSelectedCategory] = useState(initialCategory);
-
-  // Sync selectedCategory → URL whenever it changes (on Apply)
-  const applyFilters = () => {
-    setPage(1);
-    setSearchTerm(searchInput);
-    if (selectedCategory) {
-      setSearchParams({ category: selectedCategory });
-    } else {
-      setSearchParams({});
-    }
-    setShowFilters(false);
-  };
-
-  // Whenever the URL’s ?category=… changes (e.g. via navbar click), update our state
+  // sync URL → selectedCategory
   useEffect(() => {
-    const catParam = searchParams.get('category') || '';
-    setSelectedCategory(catParam);
+    setSelectedCategory(categoryId);
     setPage(1);
-  }, [searchParams]);
+  }, [categoryId]);
 
-  // Fetch category options once
+  // fetch categories once
   const didFetchCategories = useRef(false);
   useEffect(() => {
     if (didFetchCategories.current) return;
@@ -80,18 +66,30 @@ export default function Products() {
     })();
   }, []);
 
-  // Fetch products whenever any filter/sort/page/searchTerm/selectedCategory changes
+  // apply filters → write URL
+  const applyFilters = () => {
+    setPage(1);
+    const params = {};
+    if (searchInput.trim()) params.search = searchInput.trim();
+    if (selectedCategory) params.category = selectedCategory;
+    setSearchParams(params);
+    setShowFilters(false);
+  };
+
+  // fetch products
   useEffect(() => {
     const fetchProducts = async () => {
       setLoading(true);
       try {
         const params = { page, limit: 12, sort: 'newest' };
-        if (searchTerm.trim()) params.search = searchTerm.trim();
+        if (searchParams.get('search')) params.search = searchParams.get('search');
         if (selectedCategory) params.category = selectedCategory;
+
         const { data } = await api.get('/api/products', { params });
-        setProducts(Array.isArray(data.products) ? data.products : []);
+        setProducts(data.products || []);
         setPages(data.totalPages || 1);
-      } catch {
+      } catch (err) {
+        console.error('Failed to fetch products', err);
         setProducts([]);
         setPages(1);
       } finally {
@@ -99,25 +97,24 @@ export default function Products() {
       }
     };
     fetchProducts();
-  }, [page, searchTerm, selectedCategory]);
+  }, [page, searchParams, selectedCategory]);
 
-  // Handle Enter key in search
   const handleSearchKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      applyFilters();
-    }
+    if (e.key === 'Enter') applyFilters();
   };
+
+  const activeCatName =
+    categoryOptions.find((c) => c._id === selectedCategory)?.name || 'All';
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
         <h2 className="text-2xl font-bold text-neutral-800">
-          {selectedCategory || 'All'} Products
+          {activeCatName} Products
         </h2>
 
         <div className="flex items-center space-x-2 w-full lg:w-auto">
-          {/* Search */}
           <div className="relative w-full lg:w-72">
             <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400" />
             <input
@@ -126,12 +123,10 @@ export default function Products() {
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               onKeyDown={handleSearchKeyPress}
-              aria-label="Search products"
               className="w-full pl-10 pr-4 py-2 border border-neutral-300 rounded-2xl bg-neutral-50 shadow-inner focus:outline-none focus:ring-2 focus:ring-primary-300"
             />
           </div>
 
-          {/* Filter Toggle */}
           <button
             onClick={() => setShowFilters((v) => !v)}
             className="flex items-center px-4 py-2 bg-primary-600 text-white rounded-2xl hover:bg-primary-700 transition-colors"
@@ -142,7 +137,7 @@ export default function Products() {
         </div>
       </div>
 
-      {/* Animated Filter Panel */}
+      {/* Filter Panel */}
       <AnimatePresence>
         {showFilters && (
           <motion.div
@@ -153,7 +148,6 @@ export default function Products() {
             className="overflow-hidden bg-white rounded-2xl shadow-card p-6"
           >
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Category */}
               <div>
                 <label htmlFor="category" className="block text-sm font-medium text-neutral-700">
                   Category

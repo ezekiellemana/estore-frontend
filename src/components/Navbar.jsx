@@ -11,6 +11,7 @@ import {
   Moon,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import api from '../services/api';
 import useAuthStore from '../store/useAuthStore';
 import useCartStore from '../store/useCartStore';
 import useThemeStore from '../store/useThemeStore';
@@ -26,20 +27,33 @@ export default function Navbar() {
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [categories, setCategories] = useState([]);
+
+  // load categories once
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await api.get('/api/categories');
+        setCategories(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error('Could not load categories', err);
+      }
+    })();
+  }, []);
 
   // prevent back-nav when logged in
   useEffect(() => {
     if (!user) return;
     window.history.pushState(null, '', window.location.href);
-    const onPop = (e) => {
+    const handler = (e) => {
       e.preventDefault();
       setConfirmOpen(true);
     };
-    window.addEventListener('popstate', onPop);
-    return () => window.removeEventListener('popstate', onPop);
+    window.addEventListener('popstate', handler);
+    return () => window.removeEventListener('popstate', handler);
   }, [user]);
 
-  const handleLogoutClick = () => setConfirmOpen(true);
+  const triggerLogout = () => setConfirmOpen(true);
   const onConfirmLogout = () => {
     setConfirmOpen(false);
     logout();
@@ -50,16 +64,8 @@ export default function Navbar() {
     window.history.pushState(null, '', window.location.href);
   };
 
-  const categories = [
-    'Clothing & Fashion',
-    'Accessories & Lifestyle',
-    'Gadgets & Mobile Accessories',
-    'Electronics & Study Gear',
-    'Student Essentials',
-  ];
-
-  const goToCategory = (cat) => {
-    navigate(`/products?category=${encodeURIComponent(cat)}`);
+  const goToCategory = (catId) => {
+    navigate(`/products?category=${catId}`);
     setDrawerOpen(false);
   };
 
@@ -72,7 +78,6 @@ export default function Navbar() {
         className="fixed inset-x-0 top-0 z-50 bg-gradient-to-r from-primary-700 to-primary-500 shadow-navbar text-white"
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
-          {/* Logo */}
           <Link to="/" className="text-2xl font-extrabold hover:opacity-90 transition-colors">
             <span className="text-accent-300">e</span>Store
           </Link>
@@ -83,7 +88,9 @@ export default function Navbar() {
               to="/"
               className={({ isActive }) =>
                 `px-3 py-1 rounded-md ${
-                  isActive ? 'bg-accent-300 text-primary-900 font-semibold' : 'hover:bg-primary-600'
+                  isActive
+                    ? 'bg-accent-300 text-primary-900 font-semibold'
+                    : 'hover:bg-primary-600'
                 }`
               }
             >
@@ -101,11 +108,11 @@ export default function Navbar() {
               <div className="absolute left-0 mt-2 w-48 bg-white dark:bg-neutral-800 rounded-lg shadow-dropdown opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity">
                 {categories.map((cat) => (
                   <button
-                    key={cat}
-                    onClick={() => goToCategory(cat)}
+                    key={cat._id}
+                    onClick={() => goToCategory(cat._id)}
                     className="w-full text-left px-4 py-2 hover:bg-primary-100 dark:hover:bg-neutral-700 transition-colors"
                   >
-                    {cat}
+                    {cat.name}
                   </button>
                 ))}
               </div>
@@ -115,7 +122,9 @@ export default function Navbar() {
               to="/cart"
               className={({ isActive }) =>
                 `flex items-center px-3 py-1 rounded-md ${
-                  isActive ? 'bg-accent-300 text-primary-900 font-semibold' : 'hover:bg-primary-600'
+                  isActive
+                    ? 'bg-accent-300 text-primary-900 font-semibold'
+                    : 'hover:bg-primary-600'
                 }`
               }
             >
@@ -137,7 +146,7 @@ export default function Navbar() {
 
             {user ? (
               <button
-                onClick={handleLogoutClick}
+                onClick={triggerLogout}
                 className="flex items-center px-3 py-1 rounded-md hover:bg-primary-600 transition-colors"
               >
                 <LogOut size={18} className="mr-1" /> Logout
@@ -189,11 +198,11 @@ export default function Navbar() {
                   <div className="pl-4 mt-1 space-y-1">
                     {categories.map((cat) => (
                       <button
-                        key={cat}
-                        onClick={() => goToCategory(cat)}
+                        key={cat._1d}
+                        onClick={() => goToCategory(cat._id)}
                         className="block px-3 py-1 rounded-md hover:bg-primary-600 transition-colors w-full text-left"
                       >
-                        {cat}
+                        {cat.name}
                       </button>
                     ))}
                   </div>
@@ -209,7 +218,7 @@ export default function Navbar() {
                   <button
                     onClick={() => {
                       setDrawerOpen(false);
-                      handleLogoutClick();
+                      triggerLogout();
                     }}
                     className="w-full text-left px-3 py-2 rounded-md hover:bg-primary-600 transition-colors"
                   >
