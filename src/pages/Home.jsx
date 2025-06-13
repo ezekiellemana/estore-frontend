@@ -13,7 +13,7 @@ const formatPrice = (price) =>
     maximumFractionDigits: 2,
   })}/=`;
 
-// Skeleton placeholder
+// Skeleton loader
 function ProductCardSkeleton() {
   return (
     <div className="bg-white rounded-2xl shadow-lg p-4 animate-pulse flex flex-col h-full">
@@ -23,7 +23,7 @@ function ProductCardSkeleton() {
       <div className="h-4 bg-neutral-100 rounded mt-2 w-1/2" />
       <div className="mt-auto pt-4 h-6 bg-neutral-100 rounded w-1/3" />
     </div>
-  )
+  );
 }
 
 // Product card
@@ -34,7 +34,7 @@ function ProductCard({ product }) {
     : product.price;
 
   return (
-    <Link to={`/products/${product._id}`} className="block group" aria-label={product.name}>
+    <Link to={`/products/${product._id}`} className="block group">
       <motion.div
         whileHover={{ scale: 1.03 }}
         whileTap={{ scale: 0.97 }}
@@ -47,7 +47,11 @@ function ProductCard({ product }) {
             </span>
           )}
           {product.images?.[0] ? (
-            <img src={product.images[0]} alt={product.name} className="w-full h-48 object-cover" />
+            <img
+              src={product.images[0]}
+              alt={product.name}
+              className="w-full h-48 object-cover"
+            />
           ) : (
             <div className="w-full h-48 bg-neutral-100 flex items-center justify-center">
               <span className="text-neutral-400">No Image</span>
@@ -79,8 +83,12 @@ function ProductCard({ product }) {
           </p>
           <div className="mt-2 flex items-center text-sm">
             <FaStar className="text-yellow-500 mr-1" />
-            <span className="text-neutral-700">{(product.avgRating ?? 0).toFixed(1)}</span>
-            <span className="ml-2 text-neutral-500">({product.totalReviews ?? 0})</span>
+            <span className="text-neutral-700">
+              {(product.avgRating ?? 0).toFixed(1)}
+            </span>
+            <span className="ml-2 text-neutral-500">
+              ({product.totalReviews ?? 0})
+            </span>
           </div>
           <div className="mt-auto pt-4 flex justify-between items-center">
             {hasDiscount && (
@@ -90,16 +98,20 @@ function ProductCard({ product }) {
             )}
             <span
               className={`inline-block px-3 py-1 text-xs font-medium rounded-full ${
-                product.stock > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                product.stock > 0
+                  ? 'bg-green-100 text-green-700'
+                  : 'bg-red-100 text-red-700'
               }`}
             >
-              {product.stock > 0 ? `In Stock (${product.stock})` : 'Out of Stock'}
+              {product.stock > 0
+                ? `In Stock (${product.stock})`
+                : 'Out of Stock'}
             </span>
           </div>
         </div>
       </motion.div>
     </Link>
-  )
+  );
 }
 
 export default function Home() {
@@ -112,15 +124,17 @@ export default function Home() {
   const [index, setIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
 
-  // fetch data
+  // Fetch data
   useEffect(() => {
-    api.get('/api/products', { params: { sort: 'createdAt_desc', limit: 4 } })
-      .then(r => setFeatured(r.data.products || []))
+    api
+      .get('/api/products', { params: { sort: 'createdAt_desc', limit: 4 } })
+      .then((r) => setFeatured(r.data.products || []))
       .catch(() => setFeatured([]))
       .finally(() => setLoadingFeatured(false));
 
-    api.get('/api/products', { params: { discounted: true, limit: 8 } })
-      .then(r => {
+    api
+      .get('/api/products', { params: { discounted: true, limit: 8 } })
+      .then((r) => {
         const arr = r.data.products || [];
         // shuffle
         for (let i = arr.length - 1; i > 0; i--) {
@@ -134,12 +148,11 @@ export default function Home() {
       .finally(() => setLoadingOffers(false));
   }, []);
 
-  // auto-swipe
+  // Auto-swipe
   useEffect(() => {
     if (offersRef.current.length <= 4) return;
     const iv = setInterval(() => {
-      if (isPaused) return;
-      goNext();
+      if (!isPaused) goNext();
     }, 3000);
     return () => clearInterval(iv);
   }, [index, isPaused]);
@@ -148,25 +161,21 @@ export default function Home() {
     const len = offersRef.current.length;
     const next = (index - 1 + len) % len;
     setIndex(next);
-    setOffers([
-      ...offersRef.current.slice(next, next + 4),
-      ...offersRef.current.slice(0, Math.max(0, next + 4 - len))
-    ]);
+    const slice = offersRef.current;
+    setOffers([...slice.slice(next, next + 4), ...slice.slice(0, Math.max(0, next + 4 - len))]);
   };
 
   const goNext = () => {
     const len = offersRef.current.length;
     const next = (index + 1) % len;
     setIndex(next);
-    setOffers([
-      ...offersRef.current.slice(next, next + 4),
-      ...offersRef.current.slice(0, Math.max(0, next + 4 - len))
-    ]);
+    const slice = offersRef.current;
+    setOffers([...slice.slice(next, next + 4), ...slice.slice(0, Math.max(0, next + 4 - len))]);
   };
 
   return (
     <div className="space-y-20">
-      {/* Hero */}
+      {/* Hero Section */}
       <section className="relative bg-gradient-to-r from-primary-100 to-primary-50 py-20 rounded-2xl shadow-card overflow-hidden">
         <div className="absolute inset-0 opacity-10 bg-[url('/hero-bg.svg')] bg-center bg-no-repeat" />
         <div className="relative max-w-3xl mx-auto text-center px-6 space-y-6">
@@ -174,7 +183,8 @@ export default function Home() {
             Welcome to eStore
           </h1>
           <p className="text-xl sm:text-2xl text-primary-600">
-            Discover our most popular products with exclusive deals and free shipping.
+            Discover our most popular products with exclusive deals and free
+            shipping.
           </p>
           <Link to="/products" aria-label="Browse all products">
             <motion.div whileHover={{ scale: 1.05 }} transition={{ duration: 0.3 }}>
@@ -186,25 +196,41 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Featured */}
+      {/* Featured Products */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-        <h2 className="text-3xl font-semibold text-neutral-800">Featured Products</h2>
+        <h2 className="text-3xl font-semibold text-neutral-800">
+          Featured Products
+        </h2>
         {loadingFeatured ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {[...Array(4)].map((_, i) => <ProductCardSkeleton key={i} />)}
+            {[...Array(4)].map((_, i) => (
+              <ProductCardSkeleton key={i} />
+            ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {featured.length
-              ? featured.map(p => <ProductCard key={p._id} product={p} />)
-              : <p className="text-center text-neutral-500 col-span-4">No featured products.</p>}
+          <div className="overflow-x-auto sm:overflow-visible snap-x snap-mandatory">
+            <div className="inline-flex space-x-6 px-4 sm:px-0 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:gap-8">
+              {featured.length ? (
+                featured.map((p) => (
+                  <div key={p._id} className="snap-start flex-shrink-0 sm:flex-shrink pt-0">
+                    <ProductCard product={p} />
+                  </div>
+                ))
+              ) : (
+                <p className="text-center text-neutral-500 col-span-4">
+                  No featured products.
+                </p>
+              )}
+            </div>
           </div>
         )}
       </section>
 
-      {/* Offers carousel */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 relative">
-        <h2 className="text-3xl font-semibold text-neutral-800">Offers & Discounts</h2>
+      {/* Offers & Discounts */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+        <h2 className="text-3xl font-semibold text-neutral-800">
+          Offers & Discounts
+        </h2>
         <div
           className="relative overflow-hidden"
           onMouseEnter={() => setIsPaused(true)}
@@ -212,11 +238,12 @@ export default function Home() {
         >
           {loadingOffers ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-              {[...Array(4)].map((_, i) => <ProductCardSkeleton key={i} />)}
+              {[...Array(4)].map((_, i) => (
+                <ProductCardSkeleton key={i} />
+              ))}
             </div>
           ) : offers.length ? (
             <>
-              {/* slides */}
               <AnimatePresence initial={false} exitBeforeEnter>
                 <motion.div
                   key={index}
@@ -224,13 +251,19 @@ export default function Home() {
                   animate={{ x: 0 }}
                   exit={{ x: '-100%' }}
                   transition={{ duration: 0.5 }}
-                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8"
+                  className="overflow-x-auto sm:overflow-visible snap-x snap-mandatory"
                 >
-                  {offers.map(p => <ProductCard key={p._id} product={p} />)}
+                  <div className="inline-flex space-x-6 px-4 sm:px-0 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:gap-8">
+                    {offers.map((p) => (
+                      <div key={p._id} className="snap-start flex-shrink-0 sm:flex-shrink">
+                        <ProductCard product={p} />
+                      </div>
+                    ))}
+                  </div>
                 </motion.div>
               </AnimatePresence>
 
-              {/* arrows */}
+              {/* Navigation arrows */}
               <button
                 onClick={goPrev}
                 className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white p-2 rounded-full shadow hover:bg-neutral-100"
@@ -243,30 +276,6 @@ export default function Home() {
               >
                 <FaChevronRight />
               </button>
-
-              {/* indicators */}
-              <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex space-x-2">
-                {offersRef.current.map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => {
-                      setIndex(i);
-                      const len = offersRef.current.length;
-                      const start = i;
-                      setOffers([
-                        ...offersRef.current.slice(start, start + 4),
-                        ...offersRef.current.slice(
-                          0,
-                          Math.max(0, start + 4 - len)
-                        )
-                      ]);
-                    }}
-                    className={`w-2 h-2 rounded-full ${
-                      i === index ? 'bg-accent-600' : 'bg-neutral-300'
-                    }`}
-                  />
-                ))}
-              </div>
             </>
           ) : (
             <p className="text-center text-neutral-500">No current offers.</p>
