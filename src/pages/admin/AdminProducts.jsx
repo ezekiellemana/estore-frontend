@@ -12,6 +12,13 @@ const CLOUDINARY_UPLOAD_URL =
   'https://api.cloudinary.com/v1_1/dhubit7vj/upload';
 const UPLOAD_PRESET = 'estore';
 
+// Helper to format numbers like "Tsh.2,250,000.00/="
+const formatPrice = (price) =>
+  `Tsh.${price.toLocaleString('en-TZ', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}/=`;
+
 export default function AdminProducts() {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -38,7 +45,6 @@ export default function AdminProducts() {
     fetchCategories();
   }, []);
 
-  // Fetch all products
   const fetchProducts = async () => {
     try {
       const { data } = await api.get('/api/products', {
@@ -51,7 +57,6 @@ export default function AdminProducts() {
     }
   };
 
-  // Fetch categories for dropdown
   const fetchCategories = async () => {
     try {
       const { data } = await api.get('/api/categories');
@@ -62,23 +67,17 @@ export default function AdminProducts() {
     }
   };
 
-  // Prompt deletion
-  const confirmDeletion = (id) => {
-    setConfirmDeleteId(id);
-  };
-  const cancelDeletion = () => {
-    setConfirmDeleteId(null);
-  };
-  // Actually delete
+  const confirmDeletion = (id) => setConfirmDeleteId(id);
+  const cancelDeletion = () => setConfirmDeleteId(null);
+
   const handleDelete = async () => {
     const id = confirmDeleteId;
     if (!id) return;
-
     setDeletingId(id);
     try {
       await api.delete(`/api/products/${id}`);
       toast.success('Product deleted.');
-      await fetchProducts();
+      fetchProducts();
     } catch (err) {
       console.error(err);
       toast.error('Failed to delete product.');
@@ -88,7 +87,6 @@ export default function AdminProducts() {
     }
   };
 
-  // Start editing
   const startEdit = (prod) => {
     setEditingProduct(prod._id);
     setFormData({
@@ -99,7 +97,9 @@ export default function AdminProducts() {
       category: prod.category?._id || '',
       discount: prod.discount?.toString() || '',
       isFeatured: prod.isFeatured || false,
-      images: prod.images && prod.images.length > 0 ? prod.images : [''],
+      images: Array.isArray(prod.images) && prod.images.length
+        ? prod.images
+        : [''],
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -134,13 +134,11 @@ export default function AdminProducts() {
   const addImageField = () => {
     setFormData((prev) => ({ ...prev, images: [...prev.images, ''] }));
   };
-
   const removeImageField = (idx) => {
     const newImages = formData.images.filter((_, i) => i !== idx);
     setFormData((prev) => ({ ...prev, images: newImages }));
   };
 
-  // Upload to Cloudinary
   const uploadToCloudinary = async (file, slotIdx) => {
     const form = new FormData();
     form.append('file', file);
@@ -153,9 +151,7 @@ export default function AdminProducts() {
         body: form,
       });
       const data = await res.json();
-      if (data.error) {
-        throw new Error(data.error.message || 'Upload failed');
-      }
+      if (data.error) throw new Error(data.error.message || 'Upload failed');
       return data.secure_url;
     } catch (err) {
       console.error('Cloudinary upload error:', err);
@@ -179,14 +175,11 @@ export default function AdminProducts() {
     }
   };
 
-  // Toggle featured status inline
   const toggleFeaturedInline = async (prod) => {
     const newFlag = !prod.isFeatured;
     try {
       await api.put(`/api/products/${prod._id}`, { isFeatured: newFlag });
-      toast.success(
-        `Product ${newFlag ? 'marked' : 'unmarked'} as featured.`
-      );
+      toast.success(`Product ${newFlag ? 'marked' : 'unmarked'} as featured.`);
       fetchProducts();
     } catch (err) {
       console.error(err);
@@ -196,20 +189,15 @@ export default function AdminProducts() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (
-      !formData.name ||
-      !formData.price ||
-      !formData.stock ||
-      !formData.category
-    ) {
+    if (!formData.name || !formData.price || !formData.stock || !formData.category) {
       toast.error('Name, price, stock, and category are required.');
       return;
     }
 
-    // Process discount to ensure it’s numeric ≥ 0
     const parsedDiscount = parseFloat(formData.discount);
-    const discountNumeric =
-      isNaN(parsedDiscount) || parsedDiscount < 0 ? 0 : parsedDiscount;
+    const discountNumeric = isNaN(parsedDiscount) || parsedDiscount < 0
+      ? 0
+      : parsedDiscount;
 
     const validImages = formData.images.filter((url) => url.trim() !== '');
     const payload = {
@@ -260,10 +248,7 @@ export default function AdminProducts() {
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Name */}
           <div>
-            <label
-              htmlFor="name"
-              className="block text-sm font-medium text-neutral-700"
-            >
+            <label htmlFor="name" className="block text-sm font-medium text-neutral-700">
               Name *
             </label>
             <input
@@ -278,10 +263,7 @@ export default function AdminProducts() {
 
           {/* Description */}
           <div>
-            <label
-              htmlFor="description"
-              className="block text-sm font-medium text-neutral-700"
-            >
+            <label htmlFor="description" className="block text-sm font-medium text-neutral-700">
               Description
             </label>
             <textarea
@@ -289,19 +271,16 @@ export default function AdminProducts() {
               name="description"
               value={formData.description}
               onChange={handleChange}
-              rows={3}
-              className="mt-1 block w-full border border-neutral-300 rounded-2xl px-3 py-2 bg-neutral-50 shadow-inner focus:outline-none focus:ring-2 focus:ring-primary-300"
+              rows={4}
+              className="mt-1 block w-full border border-neutral-300 rounded-2xl px-3 py-2 bg-neutral-50 shadow-inner focus:outline-none focus:ring-2 focus:ring-primary-300 resize-none leading-relaxed"
             />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Price */}
             <div>
-              <label
-                htmlFor="price"
-                className="block text-sm font-medium text-neutral-700"
-              >
-                Price (Tsh) *
+              <label htmlFor="price" className="block text-sm font-medium text-neutral-700">
+                Price *
               </label>
               <input
                 id="price"
@@ -316,10 +295,7 @@ export default function AdminProducts() {
             </div>
             {/* Stock */}
             <div>
-              <label
-                htmlFor="stock"
-                className="block text-sm font-medium text-neutral-700"
-              >
+              <label htmlFor="stock" className="block text-sm font-medium text-neutral-700">
                 Stock *
               </label>
               <input
@@ -337,10 +313,7 @@ export default function AdminProducts() {
 
           {/* Category */}
           <div>
-            <label
-              htmlFor="category"
-              className="block text-sm font-medium text-neutral-700"
-            >
+            <label htmlFor="category" className="block text-sm font-medium text-neutral-700">
               Category *
             </label>
             <select
@@ -363,10 +336,7 @@ export default function AdminProducts() {
           {/* Discount & Featured */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label
-                htmlFor="discount"
-                className="block text-sm font-medium text-neutral-700"
-              >
+              <label htmlFor="discount" className="block text-sm font-medium text-neutral-700">
                 Discount (%)
               </label>
               <input
@@ -389,10 +359,7 @@ export default function AdminProducts() {
                 onChange={handleChange}
                 className="h-4 w-4 text-primary-600 border-neutral-300 rounded focus:ring-primary-500"
               />
-              <label
-                htmlFor="isFeatured"
-                className="text-sm font-medium text-neutral-700"
-              >
+              <label htmlFor="isFeatured" className="text-sm font-medium text-neutral-700">
                 Mark as Featured
               </label>
             </div>
@@ -402,10 +369,7 @@ export default function AdminProducts() {
           <div className="space-y-4">
             <p className="text-sm font-medium text-neutral-700">Images *</p>
             {formData.images.map((url, idx) => (
-              <div
-                key={idx}
-                className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center"
-              >
+              <div key={idx} className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
                 {url ? (
                   <img
                     src={url}
@@ -417,17 +381,12 @@ export default function AdminProducts() {
                     No image
                   </div>
                 )}
-
                 <div className="space-y-2">
                   <label
                     htmlFor={`file-input-${idx}`}
                     className="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-2xl cursor-pointer hover:bg-primary-700 transition-colors"
                   >
-                    {uploadingIdx === idx ? (
-                      <span>Uploading…</span>
-                    ) : (
-                      <span>{url ? 'Change File' : 'Choose File'}</span>
-                    )}
+                    {uploadingIdx === idx ? 'Uploading…' : url ? 'Change File' : 'Choose File'}
                     <input
                       id={`file-input-${idx}`}
                       type="file"
@@ -437,7 +396,6 @@ export default function AdminProducts() {
                       disabled={uploadingIdx === idx}
                     />
                   </label>
-
                   <input
                     name="images"
                     value={url}
@@ -446,7 +404,6 @@ export default function AdminProducts() {
                     className="mt-1 block w-full border border-neutral-300 rounded-2xl px-3 py-2 bg-neutral-50 shadow-inner focus:outline-none focus:ring-2 focus:ring-primary-300"
                   />
                 </div>
-
                 {formData.images.length > 1 && (
                   <button
                     type="button"
@@ -458,7 +415,6 @@ export default function AdminProducts() {
                 )}
               </div>
             ))}
-
             <button
               type="button"
               onClick={addImageField}
@@ -501,53 +457,32 @@ export default function AdminProducts() {
         <h3 className="text-xl font-medium mb-4 text-neutral-800">
           All Products
         </h3>
-        {Array.isArray(products) && products.length > 0 ? (
+        {products.length > 0 ? (
           <div className="overflow-x-auto bg-white rounded-2xl shadow-card">
             <table className="min-w-full bg-transparent">
               <thead className="bg-neutral-100">
                 <tr>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-neutral-600">
-                    Name
-                  </th>
-                  <th className="px-6 py-3 text-right text-sm font-medium text-neutral-600">
-                    Price (Tsh)
-                  </th>
-                  <th className="px-6 py-3 text-right text-sm font-medium text-neutral-600">
-                    Discount (%)
-                  </th>
-                  <th className="px-6 py-3 text-right text-sm font-medium text-neutral-600">
-                    Disc. Price (Tsh)
-                  </th>
-                  <th className="px-6 py-3 text-center text-sm font-medium text-neutral-600">
-                    Stock
-                  </th>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-neutral-600">
-                    Category
-                  </th>
-                  <th className="px-6 py-3 text-center text-sm font-medium text-neutral-600">
-                    Featured
-                  </th>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-neutral-600">
-                    Images
-                  </th>
-                  <th className="px-6 py-3 text-center text-sm font-medium text-neutral-600">
-                    Actions
-                  </th>
+                  <th className="px-6 py-3 text-left text-sm font-medium text-neutral-600">Name</th>
+                  <th className="px-6 py-3 text-right text-sm font-medium text-neutral-600">Price</th>
+                  <th className="px-6 py-3 text-right text-sm font-medium text-neutral-600">Discount (%)</th>
+                  <th className="px-6 py-3 text-right text-sm font-medium text-neutral-600">Disc. Price</th>
+                  <th className="px-6 py-3 text-center text-sm font-medium text-neutral-600">Stock</th>
+                  <th className="px-6 py-3 text-left text-sm font-medium text-neutral-600">Category</th>
+                  <th className="px-6 py-3 text-center text-sm font-medium text-neutral-600">Featured</th>
+                  <th className="px-6 py-3 text-left text-sm font-medium text-neutral-600">Images</th>
+                  <th className="px-6 py-3 text-left text-sm font-medium text-neutral-600">Description</th>
+                  <th className="px-6 py-3 text-center text-sm font-medium text-neutral-600">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {products.map((prod, idx) => {
-                  // Compute discounted price
-                  const rawPrice = prod.price;
+                  const rawPrice = parseFloat(prod.price) || 0;
                   const parsedDiscount = parseFloat(prod.discount);
-                  const rawDiscount =
-                    isNaN(parsedDiscount) || parsedDiscount < 0
-                      ? 0
-                      : parsedDiscount;
-                  const discountedRaw =
-                    (rawPrice * (100 - rawDiscount)) / 100;
-                  const discountedPrice =
-                    Math.round(discountedRaw * 100) / 100;
+                  const rawDiscount = isNaN(parsedDiscount) || parsedDiscount < 0
+                    ? 0
+                    : parsedDiscount;
+                  const discountedRaw = (rawPrice * (100 - rawDiscount)) / 100;
+                  const discountedPrice = Math.round(discountedRaw * 100) / 100;
 
                   return (
                     <motion.tr
@@ -557,17 +492,15 @@ export default function AdminProducts() {
                       transition={{ delay: idx * 0.05 }}
                       className="border-b even:bg-white hover:bg-neutral-100 transition-colors"
                     >
-                      <td className="px-6 py-4 text-neutral-800">
-                        {prod.name}
+                      <td className="px-6 py-4 text-neutral-800">{prod.name}</td>
+                      <td className="px-6 py-4 text-neutral-700 text-right">
+                        {formatPrice(rawPrice)}
                       </td>
                       <td className="px-6 py-4 text-neutral-700 text-right">
-                        {rawPrice.toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 text-neutral-700 text-right">
-                        {rawDiscount.toFixed(2)}
+                        {rawDiscount.toFixed(2)}%
                       </td>
                       <td className="px-6 py-4 text-neutral-800 text-right font-semibold">
-                        {discountedPrice.toFixed(2)}
+                        {formatPrice(discountedPrice)}
                       </td>
                       <td className="px-6 py-4 text-neutral-700 text-center">
                         {prod.stock}
@@ -579,9 +512,7 @@ export default function AdminProducts() {
                         <button
                           onClick={() => toggleFeaturedInline(prod)}
                           className={`text-xl ${
-                            prod.isFeatured
-                              ? 'text-yellow-500'
-                              : 'text-neutral-400'
+                            prod.isFeatured ? 'text-yellow-500' : 'text-neutral-400'
                           } focus:outline-none`}
                           title={
                             prod.isFeatured
@@ -610,10 +541,11 @@ export default function AdminProducts() {
                             )}
                           </div>
                         ) : (
-                          <span className="text-neutral-500 text-sm">
-                            No images
-                          </span>
+                          <span className="text-neutral-500 text-sm">No images</span>
                         )}
+                      </td>
+                      <td className="px-6 py-4 text-neutral-700 max-w-xs truncate">
+                        {prod.description || '—'}
                       </td>
                       <td className="px-6 py-4 text-center space-x-4">
                         <button
@@ -636,13 +568,11 @@ export default function AdminProducts() {
             </table>
           </div>
         ) : (
-          <p className="text-center text-neutral-500 py-6">
-            No products found.
-          </p>
+          <p className="text-center text-neutral-500 py-6">No products found.</p>
         )}
       </div>
 
-      {/* Confirmation Modal via Portal */}
+      {/* Deletion Confirmation Modal */}
       {confirmDeleteId &&
         ReactDOM.createPortal(
           <AnimatePresence>
