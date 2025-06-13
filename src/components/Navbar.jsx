@@ -29,7 +29,7 @@ export default function Navbar() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [categories, setCategories] = useState([]);
 
-  // load categories once
+  // Load categories from backend
   useEffect(() => {
     (async () => {
       try {
@@ -41,7 +41,7 @@ export default function Navbar() {
     })();
   }, []);
 
-  // prevent back-nav when logged in
+  // Prevent back-nav when user is logged in
   useEffect(() => {
     if (!user) return;
     window.history.pushState(null, '', window.location.href);
@@ -78,6 +78,7 @@ export default function Navbar() {
         className="fixed inset-x-0 top-0 z-50 bg-gradient-to-r from-primary-700 to-primary-500 shadow-navbar text-white"
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
+          {/* Logo */}
           <Link to="/" className="text-2xl font-extrabold hover:opacity-90 transition-colors">
             <span className="text-accent-300">e</span>Store
           </Link>
@@ -105,12 +106,12 @@ export default function Navbar() {
                   <path d="M19 9l-7 7-7-7" strokeWidth="2" strokeLinecap="round" />
                 </svg>
               </button>
-              <div className="absolute left-0 mt-2 w-48 bg-white dark:bg-neutral-800 rounded-lg shadow-dropdown opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity">
+              <div className="absolute left-0 mt-2 w-48 bg-primary-600 text-white rounded-lg shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity">
                 {categories.map((cat) => (
                   <button
                     key={cat._id}
                     onClick={() => goToCategory(cat._id)}
-                    className="w-full text-left px-4 py-2 hover:bg-primary-100 dark:hover:bg-neutral-700 transition-colors"
+                    className="w-full text-left px-4 py-2 hover:bg-primary-700 transition-colors"
                   >
                     {cat.name}
                   </button>
@@ -198,7 +199,7 @@ export default function Navbar() {
                   <div className="pl-4 mt-1 space-y-1">
                     {categories.map((cat) => (
                       <button
-                        key={cat._1d}
+                        key={cat._id}
                         onClick={() => goToCategory(cat._id)}
                         className="block px-3 py-1 rounded-md hover:bg-primary-600 transition-colors w-full text-left"
                       >
