@@ -1,4 +1,5 @@
 // src/components/Navbar.jsx
+
 import React, { useEffect, useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import {
@@ -26,7 +27,7 @@ export default function Navbar() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
-  // Prevent back nav when logged in
+  // prevent back-nav when logged in
   useEffect(() => {
     if (!user) return;
     window.history.pushState(null, '', window.location.href);
@@ -38,7 +39,7 @@ export default function Navbar() {
     return () => window.removeEventListener('popstate', onPop);
   }, [user]);
 
-  const handleLogout = () => setConfirmOpen(true);
+  const handleLogoutClick = () => setConfirmOpen(true);
   const onConfirmLogout = () => {
     setConfirmOpen(false);
     logout();
@@ -57,6 +58,11 @@ export default function Navbar() {
     'Student Essentials',
   ];
 
+  const goToCategory = (cat) => {
+    navigate(`/products?category=${encodeURIComponent(cat)}`);
+    setDrawerOpen(false);
+  };
+
   return (
     <>
       <motion.nav
@@ -67,10 +73,7 @@ export default function Navbar() {
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
           {/* Logo */}
-          <Link
-            to="/"
-            className="text-2xl font-extrabold hover:opacity-90 transition-colors"
-          >
+          <Link to="/" className="text-2xl font-extrabold hover:opacity-90 transition-colors">
             <span className="text-accent-300">e</span>Store
           </Link>
 
@@ -80,41 +83,30 @@ export default function Navbar() {
               to="/"
               className={({ isActive }) =>
                 `px-3 py-1 rounded-md ${
-                  isActive
-                    ? 'bg-accent-300 text-primary-900 font-semibold'
-                    : 'hover:bg-primary-600'
+                  isActive ? 'bg-accent-300 text-primary-900 font-semibold' : 'hover:bg-primary-600'
                 }`
               }
             >
               Home
             </NavLink>
 
-            {/* Products */}
+            {/* Products Dropdown */}
             <div className="relative group">
               <button className="flex items-center px-3 py-1 rounded-md hover:bg-primary-600 transition-colors">
                 Products
-                <svg
-                  className="ml-1 w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    d="M19 9l-7 7-7-7"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                  />
+                <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path d="M19 9l-7 7-7-7" strokeWidth="2" strokeLinecap="round" />
                 </svg>
               </button>
               <div className="absolute left-0 mt-2 w-48 bg-white dark:bg-neutral-800 rounded-lg shadow-dropdown opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity">
                 {categories.map((cat) => (
-                  <Link
+                  <button
                     key={cat}
-                    to={`/products?category=${encodeURIComponent(cat)}`}
-                    className="block px-4 py-2 hover:bg-primary-100 dark:hover:bg-neutral-700 transition-colors"
+                    onClick={() => goToCategory(cat)}
+                    className="w-full text-left px-4 py-2 hover:bg-primary-100 dark:hover:bg-neutral-700 transition-colors"
                   >
                     {cat}
-                  </Link>
+                  </button>
                 ))}
               </div>
             </div>
@@ -123,9 +115,7 @@ export default function Navbar() {
               to="/cart"
               className={({ isActive }) =>
                 `flex items-center px-3 py-1 rounded-md ${
-                  isActive
-                    ? 'bg-accent-300 text-primary-900 font-semibold'
-                    : 'hover:bg-primary-600'
+                  isActive ? 'bg-accent-300 text-primary-900 font-semibold' : 'hover:bg-primary-600'
                 }`
               }
             >
@@ -147,23 +137,17 @@ export default function Navbar() {
 
             {user ? (
               <button
-                onClick={handleLogout}
+                onClick={handleLogoutClick}
                 className="flex items-center px-3 py-1 rounded-md hover:bg-primary-600 transition-colors"
               >
                 <LogOut size={18} className="mr-1" /> Logout
               </button>
             ) : (
               <>
-                <NavLink
-                  to="/login"
-                  className="px-3 py-1 rounded-md hover:bg-primary-600 transition-colors"
-                >
+                <NavLink to="/login" className="px-3 py-1 rounded-md hover:bg-primary-600 transition-colors">
                   Log In
                 </NavLink>
-                <NavLink
-                  to="/signup"
-                  className="px-3 py-1 rounded-md hover:bg-primary-600 transition-colors"
-                >
+                <NavLink to="/signup" className="px-3 py-1 rounded-md hover:bg-primary-600 transition-colors">
                   Sign Up
                 </NavLink>
               </>
@@ -204,14 +188,13 @@ export default function Navbar() {
                   </summary>
                   <div className="pl-4 mt-1 space-y-1">
                     {categories.map((cat) => (
-                      <NavLink
+                      <button
                         key={cat}
-                        to={`/products?category=${encodeURIComponent(cat)}`}
-                        onClick={() => setDrawerOpen(false)}
-                        className="block px-3 py-1 rounded-md hover:bg-primary-600 transition-colors"
+                        onClick={() => goToCategory(cat)}
+                        className="block px-3 py-1 rounded-md hover:bg-primary-600 transition-colors w-full text-left"
                       >
                         {cat}
-                      </NavLink>
+                      </button>
                     ))}
                   </div>
                 </details>
@@ -226,7 +209,7 @@ export default function Navbar() {
                   <button
                     onClick={() => {
                       setDrawerOpen(false);
-                      handleLogout();
+                      handleLogoutClick();
                     }}
                     className="w-full text-left px-3 py-2 rounded-md hover:bg-primary-600 transition-colors"
                   >

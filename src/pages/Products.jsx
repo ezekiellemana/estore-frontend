@@ -1,4 +1,7 @@
+// src/pages/Products.jsx
+
 import React, { useEffect, useState, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import api from '../services/api';
 import ProductCard from '../components/ProductCard';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -8,26 +11,26 @@ import { FaSearch, FaFilter } from 'react-icons/fa';
 function ProductGridSkeleton({ count = 12 }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-      {Array(count)
-        .fill(0)
-        .map((_, i) => (
-          <div
-            key={i}
-            className="bg-white rounded-2xl shadow-lg p-4 animate-pulse flex flex-col h-full"
-          >
-            <div className="w-full h-48 bg-neutral-200 rounded-lg" />
-            <div className="h-5 bg-neutral-200 rounded mt-4 w-2/3" />
-            <div className="h-4 bg-neutral-100 rounded mt-2 w-1/3" />
-            <div className="h-4 bg-neutral-100 rounded mt-2 w-1/2" />
-            <div className="mt-auto pt-4 h-6 bg-neutral-100 rounded w-1/3" />
-          </div>
-        ))}
+      {Array.from({ length: count }).map((_, i) => (
+        <div
+          key={i}
+          className="bg-white rounded-2xl shadow-lg p-4 animate-pulse flex flex-col h-full"
+        >
+          <div className="w-full h-48 bg-neutral-200 rounded-lg" />
+          <div className="h-5 bg-neutral-200 rounded mt-4 w-2/3" />
+          <div className="h-4 bg-neutral-100 rounded mt-2 w-1/3" />
+          <div className="h-4 bg-neutral-100 rounded mt-2 w-1/2" />
+          <div className="mt-auto pt-4 h-6 bg-neutral-100 rounded w-1/3" />
+        </div>
+      ))}
     </div>
   );
 }
 
 export default function Products() {
-  // Product list and pagination
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Product list + pagination
   const [products, setProducts] = useState([]);
   const [pages, setPages] = useState(1);
   const [page, setPage] = useState(1);
@@ -37,54 +40,58 @@ export default function Products() {
   const [searchInput, setSearchInput] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryOptions, setCategoryOptions] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [minPrice, setMinPrice] = useState('');
-  const [maxPrice, setMaxPrice] = useState('');
-  const [discountedOnly, setDiscountedOnly] = useState(false);
-  const [inStockOnly, setInStockOnly] = useState(false);
-  const [sortBy, setSortBy] = useState('newest');
-
-  // Toggle filter panel
   const [showFilters, setShowFilters] = useState(false);
 
-  // Prevent double‐fetch categories
-  const didFetchCategories = useRef(false);
+  // Initialize selectedCategory from URL param
+  const initialCategory = searchParams.get('category') || '';
+  const [selectedCategory, setSelectedCategory] = useState(initialCategory);
 
-  // Fetch categories once
+  // Sync selectedCategory → URL whenever it changes (on Apply)
+  const applyFilters = () => {
+    setPage(1);
+    setSearchTerm(searchInput);
+    if (selectedCategory) {
+      setSearchParams({ category: selectedCategory });
+    } else {
+      setSearchParams({});
+    }
+    setShowFilters(false);
+  };
+
+  // Whenever the URL’s ?category=… changes (e.g. via navbar click), update our state
+  useEffect(() => {
+    const catParam = searchParams.get('category') || '';
+    setSelectedCategory(catParam);
+    setPage(1);
+  }, [searchParams]);
+
+  // Fetch category options once
+  const didFetchCategories = useRef(false);
   useEffect(() => {
     if (didFetchCategories.current) return;
     didFetchCategories.current = true;
-    const fetchCategories = async () => {
+    (async () => {
       try {
         const { data } = await api.get('/api/categories');
         setCategoryOptions(Array.isArray(data) ? data : []);
-      } catch (err) {
+      } catch {
         setCategoryOptions([]);
       }
-    };
-    fetchCategories();
+    })();
   }, []);
 
-  // Fetch products whenever any filter/sort/page/searchTerm changes
+  // Fetch products whenever any filter/sort/page/searchTerm/selectedCategory changes
   useEffect(() => {
     const fetchProducts = async () => {
       setLoading(true);
       try {
-        const params = {
-          page,
-          limit: 12,
-          sort: sortBy,
-        };
+        const params = { page, limit: 12, sort: 'newest' };
         if (searchTerm.trim()) params.search = searchTerm.trim();
         if (selectedCategory) params.category = selectedCategory;
-        if (minPrice) params.minPrice = parseFloat(minPrice);
-        if (maxPrice) params.maxPrice = parseFloat(maxPrice);
-        if (discountedOnly) params.discounted = true;
-        if (inStockOnly) params.inStock = true;
         const { data } = await api.get('/api/products', { params });
         setProducts(Array.isArray(data.products) ? data.products : []);
         setPages(data.totalPages || 1);
-      } catch (err) {
+      } catch {
         setProducts([]);
         setPages(1);
       } finally {
@@ -92,30 +99,25 @@ export default function Products() {
       }
     };
     fetchProducts();
-  }, [page, searchTerm, selectedCategory, minPrice, maxPrice, discountedOnly, inStockOnly, sortBy]);
+  }, [page, searchTerm, selectedCategory]);
 
-  // Handle search input (controlled input)
+  // Handle Enter key in search
   const handleSearchKeyPress = (e) => {
     if (e.key === 'Enter') {
-      setPage(1);
-      setSearchTerm(searchInput);
+      applyFilters();
     }
-  };
-
-  const applyFilters = () => {
-    setPage(1);
-    setSearchTerm(searchInput);
-    setShowFilters(false); // auto-close filters on mobile for better UX
   };
 
   return (
     <div className="space-y-6">
-      {/* Header with Search & Filter */}
+      {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
-        <h2 className="text-2xl font-bold text-neutral-800">All Products</h2>
+        <h2 className="text-2xl font-bold text-neutral-800">
+          {selectedCategory || 'All'} Products
+        </h2>
 
         <div className="flex items-center space-x-2 w-full lg:w-auto">
-          {/* Search Input */}
+          {/* Search */}
           <div className="relative w-full lg:w-72">
             <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400" />
             <input
@@ -131,7 +133,7 @@ export default function Products() {
 
           {/* Filter Toggle */}
           <button
-            onClick={() => setShowFilters((prev) => !prev)}
+            onClick={() => setShowFilters((v) => !v)}
             className="flex items-center px-4 py-2 bg-primary-600 text-white rounded-2xl hover:bg-primary-700 transition-colors"
           >
             <FaFilter className="mr-2" />
@@ -151,7 +153,7 @@ export default function Products() {
             className="overflow-hidden bg-white rounded-2xl shadow-card p-6"
           >
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Category Select */}
+              {/* Category */}
               <div>
                 <label htmlFor="category" className="block text-sm font-medium text-neutral-700">
                   Category
@@ -173,92 +175,9 @@ export default function Products() {
                   ))}
                 </select>
               </div>
-
-              {/* Min Price */}
-              <div>
-                <label htmlFor="minPrice" className="block text-sm font-medium text-neutral-700">
-                  Min Price (Tsh)
-                </label>
-                <input
-                  id="minPrice"
-                  type="number"
-                  step="0.01"
-                  value={minPrice}
-                  onChange={(e) => {
-                    setMinPrice(e.target.value);
-                    setPage(1);
-                  }}
-                  className="mt-1 block w-full border border-neutral-300 rounded-2xl px-3 py-2 bg-neutral-50 shadow-inner focus:outline-none focus:ring-2 focus:ring-primary-300"
-                />
-              </div>
-
-              {/* Max Price */}
-              <div>
-                <label htmlFor="maxPrice" className="block text-sm font-medium text-neutral-700">
-                  Max Price (Tsh)
-                </label>
-                <input
-                  id="maxPrice"
-                  type="number"
-                  step="0.01"
-                  value={maxPrice}
-                  onChange={(e) => {
-                    setMaxPrice(e.target.value);
-                    setPage(1);
-                  }}
-                  className="mt-1 block w-full border border-neutral-300 rounded-2xl px-3 py-2 bg-neutral-50 shadow-inner focus:outline-none focus:ring-2 focus:ring-primary-300"
-                />
-              </div>
-
-              {/* Checkboxes */}
-              <div className="flex flex-col justify-end space-y-2">
-                <label className="inline-flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={discountedOnly}
-                    onChange={(e) => {
-                      setDiscountedOnly(e.target.checked);
-                      setPage(1);
-                    }}
-                    className="rounded text-primary-600 focus:ring-primary-500"
-                  />
-                  <span className="ml-2 text-sm text-neutral-700">Discounted only</span>
-                </label>
-                <label className="inline-flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={inStockOnly}
-                    onChange={(e) => {
-                      setInStockOnly(e.target.checked);
-                      setPage(1);
-                    }}
-                    className="rounded text-primary-600 focus:ring-primary-500"
-                  />
-                  <span className="ml-2 text-sm text-neutral-700">In stock only</span>
-                </label>
-              </div>
             </div>
 
-            {/* Sort & Apply */}
             <div className="flex items-center space-x-4 mt-6">
-              <label htmlFor="sortBy" className="text-sm font-medium text-neutral-700">
-                Sort by:
-              </label>
-              <select
-                id="sortBy"
-                value={sortBy}
-                onChange={(e) => {
-                  setSortBy(e.target.value);
-                  setPage(1);
-                }}
-                className="mt-1 block w-40 border border-neutral-300 rounded-2xl px-3 py-2 bg-neutral-50 shadow-inner focus:outline-none focus:ring-2 focus:ring-primary-300"
-              >
-                <option value="newest">Newest</option>
-                <option value="price_asc">Price: Low to High</option>
-                <option value="price_desc">Price: High to Low</option>
-                <option value="rating_desc">Rating</option>
-              </select>
-
               <button
                 onClick={applyFilters}
                 className="ml-auto px-6 py-2 bg-primary-600 text-white rounded-2xl hover:bg-primary-700 transition-colors"
@@ -272,7 +191,7 @@ export default function Products() {
 
       {/* Product Grid */}
       {loading ? (
-        <ProductGridSkeleton count={12} />
+        <ProductGridSkeleton />
       ) : products.length === 0 ? (
         <p className="text-center text-neutral-500">No products found.</p>
       ) : (
