@@ -10,7 +10,7 @@ import { Trash2, Edit3 } from 'lucide-react';
 const CLOUDINARY_UPLOAD_URL = 'https://api.cloudinary.com/v1_1/dhubit7vj/upload';
 const UPLOAD_PRESET = 'estore';
 
-// Helper to format numbers like "Tsh.2,250,000.00/="
+// Format numbers like "Tsh.2,250,000.00/="
 const formatPrice = (price) =>
   `Tsh.${price.toLocaleString('en-TZ', {
     minimumFractionDigits: 2,
@@ -38,6 +38,12 @@ export default function AdminProducts() {
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
 
+  // Search & pagination
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // Fetch products & categories on mount
   useEffect(() => {
     fetchProducts();
     fetchCategories();
@@ -45,7 +51,9 @@ export default function AdminProducts() {
 
   const fetchProducts = async () => {
     try {
-      const { data } = await api.get('/api/products', { params: { page: 1, limit: 1000 } });
+      const { data } = await api.get('/api/products', {
+        params: { page: 1, limit: 1000 },
+      });
       setProducts(Array.isArray(data.products) ? data.products : []);
     } catch {
       toast.error('Failed to load products.');
@@ -61,6 +69,17 @@ export default function AdminProducts() {
     }
   };
 
+  // Filter & paginate list
+  const filtered = products.filter((p) =>
+    p.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const displayed = filtered.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  // Delete handlers
   const confirmDeletion = (id) => setConfirmDeleteId(id);
   const cancelDeletion = () => setConfirmDeleteId(null);
 
@@ -79,6 +98,7 @@ export default function AdminProducts() {
     }
   };
 
+  // Edit form handlers
   const startEdit = (prod) => {
     setEditingProduct(prod._id);
     setFormData({
@@ -126,6 +146,7 @@ export default function AdminProducts() {
   const removeImageField = (idx) =>
     setFormData((f) => ({ ...f, images: f.images.filter((_, i) => i !== idx) }));
 
+  // Upload image
   const uploadToCloudinary = async (file, slotIdx) => {
     const body = new FormData();
     body.append('file', file);
@@ -155,6 +176,7 @@ export default function AdminProducts() {
     }
   };
 
+  // Toggle featured
   const toggleFeaturedInline = async (prod) => {
     try {
       await api.put(`/api/products/${prod._id}`, { isFeatured: !prod.isFeatured });
@@ -164,6 +186,7 @@ export default function AdminProducts() {
     }
   };
 
+  // Submit add/edit
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.name || !formData.price || !formData.stock || !formData.category) {
@@ -335,7 +358,7 @@ export default function AdminProducts() {
                   <img
                     src={url}
                     alt=""
-                    className="w-32 h-32 rounded-lg border border-neutral-200 object-cover"
+                    className="h-32 w-32 rounded-lg border border-neutral-200 object-cover"
                   />
                 ) : (
                   <div className="flex h-32 w-32 items-center justify-center rounded-lg border border-neutral-200 bg-neutral-100 text-neutral-400">
@@ -411,11 +434,24 @@ export default function AdminProducts() {
       </motion.div>
 
       {/* Products Table */}
-      <div className="bg-white rounded-2xl shadow-card overflow-x-auto p-6 lg:p-8">
-        <h3 className="text-xl font-medium text-neutral-800 mb-4">All Products</h3>
-        {products.length > 0 ? (
+      <div className="bg-white rounded-2xl shadow-card overflow-x-auto">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between p-6 lg:p-8">
+          <h3 className="text-xl font-medium text-neutral-800">All Products</h3>
+          <input
+            type="text"
+            placeholder="Search products..."
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="mt-4 md:mt-0 block max-w-sm rounded-2xl border border-neutral-300 bg-neutral-50 px-3 py-2 shadow-inner focus:ring-2 focus:ring-primary-300"
+          />
+        </div>
+
+        {filtered.length > 0 ? (
           <table className="min-w-full">
-            <thead className="bg-neutral-100">
+            <thead className="bg-neutral-100 sticky top-0 z-10">
               <tr>
                 <th className="px-4 py-2 text-left text-sm font-medium">Name</th>
                 <th className="px-4 py-2 text-right text-sm font-medium">Price</th>
@@ -430,7 +466,7 @@ export default function AdminProducts() {
               </tr>
             </thead>
             <tbody>
-              {products.map((prod, i) => {
+              {displayed.map((prod, i) => {
                 const price = parseFloat(prod.price) || 0;
                 const disc = Math.max(0, parseFloat(prod.discount) || 0);
                 const finalP = Math.round(((price * (100 - disc)) / 100) * 100) / 100;
@@ -445,7 +481,9 @@ export default function AdminProducts() {
                     <td className="px-4 py-2">{prod.name}</td>
                     <td className="px-4 py-2 text-right">{formatPrice(price)}</td>
                     <td className="px-4 py-2 text-right">{disc.toFixed(2)}%</td>
-                    <td className="px-4 py-2 text-right font-semibold">{formatPrice(finalP)}</td>
+                    <td className="px-4 py-2 text-right font-semibold">
+                      {formatPrice(finalP)}
+                    </td>
                     <td className="px-4 py-2 text-center">{prod.stock}</td>
                     <td className="px-4 py-2">{prod.category?.name || '—'}</td>
                     <td className="px-4 py-2 text-center">
@@ -457,12 +495,7 @@ export default function AdminProducts() {
                       {prod.images?.length ? (
                         <div className="flex space-x-1">
                           {prod.images.slice(0, 3).map((u, idx) => (
-                            <img
-                              key={idx}
-                              src={u}
-                              alt=""
-                              className="h-8 w-8 rounded object-cover"
-                            />
+                            <img key={idx} src={u} alt="" className="h-8 w-8 rounded object-cover" />
                           ))}
                           {prod.images.length > 3 && <span>+{prod.images.length - 3}</span>}
                         </div>
@@ -485,7 +518,49 @@ export default function AdminProducts() {
             </tbody>
           </table>
         ) : (
-          <p className="text-center text-neutral-500 py-8">No products found.</p>
+          <p className="text-center text-neutral-500 py-8">
+            No products matching “{searchTerm}”.
+          </p>
+        )}
+
+        {/* Pagination */}
+        {filtered.length > itemsPerPage && (
+          <div className="flex items-center justify-between px-6 py-4">
+            <p className="text-sm text-neutral-600">
+              Showing{' '}
+              {(currentPage - 1) * itemsPerPage + 1}– 
+              {Math.min(currentPage * itemsPerPage, filtered.length)} of {filtered.length}
+            </p>
+            <div className="flex space-x-2">
+              <button
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage((p) => p - 1)}
+                className="rounded-2xl bg-neutral-200 px-3 py-1 disabled:opacity-50"
+              >
+                Previous
+              </button>
+              {[...Array(totalPages)].map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setCurrentPage(idx + 1)}
+                  className={`rounded-2xl px-3 py-1 ${
+                    currentPage === idx + 1
+                      ? 'bg-primary-600 text-white'
+                      : 'bg-neutral-200'
+                  }`}
+                >
+                  {idx + 1}
+                </button>
+              ))}
+              <button
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage((p) => p + 1)}
+                className="rounded-2xl bg-neutral-200 px-3 py-1 disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+          </div>
         )}
       </div>
 
