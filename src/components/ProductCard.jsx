@@ -1,20 +1,26 @@
-// src/components/ProductCard.jsx
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { FaStar } from 'react-icons/fa';
 
 export default function ProductCard({ product }) {
-  // Calculate discounted price if applicable
+  // Determine if there's a discount
   const hasDiscount = product.discount && product.discount > 0;
+  // Calculate discounted price
   const discountedPrice = hasDiscount
     ? Math.round(product.price * (1 - product.discount / 100) * 100) / 100
     : product.price;
 
+  // Format price with thousand separators and precision, plus "/=" suffix
+  const formatPrice = (price) =>
+    `Tsh.${price.toLocaleString('en-TZ', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}/=`;
+
   return (
     <Link to={`/products/${product._id}`} className="block">
       <div className="relative bg-white rounded-2xl shadow-card overflow-hidden flex flex-col h-full">
-        {/* FEATURED STAR */}
+        {/* Featured Star */}
         {product.isFeatured && (
           <div className="absolute top-2 right-2 z-10">
             <FaStar className="w-6 h-6 text-yellow-500" />
@@ -46,15 +52,15 @@ export default function ProductCard({ product }) {
             {hasDiscount ? (
               <div className="flex items-baseline space-x-2">
                 <span className="text-neutral-500 line-through text-sm">
-                  Tsh.{product.price.toFixed(2)}
+                  {formatPrice(product.price)}
                 </span>
                 <span className="text-accent-600 font-semibold">
-                  Tsh.{discountedPrice.toFixed(2)}
+                  {formatPrice(discountedPrice)}
                 </span>
               </div>
             ) : (
               <p className="text-accent-600 font-semibold">
-                Tsh.{product.price.toFixed(2)}
+                {formatPrice(product.price)}
               </p>
             )}
           </div>
