@@ -20,6 +20,14 @@ export default function ProductCard({ product }) {
       <div className="relative flex flex-col bg-white rounded-2xl shadow hover:shadow-lg overflow-hidden transition">
         {/* IMAGE + BADGES */}
         <div className="relative">
+          {hasDiscount && (
+            <span className="absolute top-2 left-2 bg-accent-600 text-white text-xs font-medium px-2 py-1 rounded-full z-10">
+              {product.discount}% OFF
+            </span>
+          )}
+          {product.isFeatured && (
+            <FaStar className="absolute top-2 right-2 text-yellow-500 w-6 h-6" />
+          )}
           {product.images?.[0] ? (
             <img
               src={product.images[0]}
@@ -30,15 +38,6 @@ export default function ProductCard({ product }) {
             <div className="w-full h-48 bg-neutral-100 flex items-center justify-center">
               <span className="text-neutral-400">No Image</span>
             </div>
-          )}
-
-          {hasDiscount && (
-            <span className="absolute top-2 left-2 bg-accent-600 text-white text-xs font-medium px-2 py-1 rounded-full">
-              {product.discount}% OFF
-            </span>
-          )}
-          {product.isFeatured && (
-            <FaStar className="absolute top-2 right-2 text-yellow-500 w-6 h-6" />
           )}
           {product.stock === 0 && (
             <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center">
@@ -72,23 +71,20 @@ export default function ProductCard({ product }) {
             </div>
           </div>
 
-          {/* PRICE & STOCK */}
+          {/* PRICE */}
           <div className="mt-auto space-y-1">
-            {hasDiscount ? (
-              <div className="flex items-baseline space-x-2">
-                <span className="text-sm text-neutral-500 line-through">
+            <div className="flex flex-wrap items-baseline space-x-2">
+              {hasDiscount && (
+                <span className="text-sm text-neutral-500 line-through whitespace-nowrap">
                   {formatPrice(product.price)}
                 </span>
-                <span className="text-lg font-bold text-accent-600">
-                  {formatPrice(discountedPrice)}
-                </span>
-              </div>
-            ) : (
-              <span className="text-lg font-bold text-accent-600">
-                {formatPrice(product.price)}
+              )}
+              <span className="text-lg font-bold text-accent-600 whitespace-nowrap">
+                {formatPrice(discountedPrice)}
               </span>
-            )}
+            </div>
 
+            {/* STOCK BADGE */}
             <span
               className={`inline-block text-xs font-medium rounded-full px-2 py-0.5 ${
                 product.stock > 0
