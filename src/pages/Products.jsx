@@ -7,7 +7,7 @@ import ProductCard from '../components/ProductCard';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaSearch, FaFilter } from 'react-icons/fa';
 
-// Loading skeleton for product grid
+// same skeleton you had
 function ProductGridSkeleton({ count = 12 }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -29,33 +29,29 @@ function ProductGridSkeleton({ count = 12 }) {
 
 export default function Products() {
   const [searchParams, setSearchParams] = useSearchParams();
-
-  // URL-driven
   const categoryId = searchParams.get('category') || '';
   const [searchInput, setSearchInput] = useState(searchParams.get('search') || '');
 
-  // Product list + pagination
   const [products, setProducts] = useState([]);
   const [pages, setPages] = useState(1);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
 
-  // Filter & sort UI
   const [categoryOptions, setCategoryOptions] = useState([]);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(categoryId);
 
-  // sync URL → selectedCategory
+  // keep URL → selectedCategory in sync
   useEffect(() => {
     setSelectedCategory(categoryId);
     setPage(1);
   }, [categoryId]);
 
-  // fetch categories once
-  const didFetchCategories = useRef(false);
+  // load category list once
+  const didFetchCats = useRef(false);
   useEffect(() => {
-    if (didFetchCategories.current) return;
-    didFetchCategories.current = true;
+    if (didFetchCats.current) return;
+    didFetchCats.current = true;
     (async () => {
       try {
         const { data } = await api.get('/api/categories');
@@ -66,7 +62,7 @@ export default function Products() {
     })();
   }, []);
 
-  // apply filters → write URL
+  // apply filters back into URL
   const applyFilters = () => {
     setPage(1);
     const params = {};
@@ -76,9 +72,9 @@ export default function Products() {
     setShowFilters(false);
   };
 
-  // fetch products
+  // fetch products whenever page, URL-params or selectedCategory changes
   useEffect(() => {
-    const fetchProducts = async () => {
+    const fetchProds = async () => {
       setLoading(true);
       try {
         const params = { page, limit: 12, sort: 'newest' };
@@ -96,13 +92,14 @@ export default function Products() {
         setLoading(false);
       }
     };
-    fetchProducts();
+    fetchProds();
   }, [page, searchParams, selectedCategory]);
 
   const handleSearchKeyPress = (e) => {
     if (e.key === 'Enter') applyFilters();
   };
 
+  // find friendly name for header
   const activeCatName =
     categoryOptions.find((c) => c._id === selectedCategory)?.name || 'All';
 
