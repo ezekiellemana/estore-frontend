@@ -10,7 +10,7 @@ import { Trash2, Edit3 } from 'lucide-react';
 const CLOUDINARY_UPLOAD_URL = 'https://api.cloudinary.com/v1_1/dhubit7vj/upload';
 const UPLOAD_PRESET = 'estore';
 
-// Format prices like "Tsh.2,250,000.00/="
+// Format numbers like "Tsh.2,250,000.00/="
 const formatPrice = (price) =>
   `Tsh.${price.toLocaleString('en-TZ', {
     minimumFractionDigits: 2,
@@ -43,7 +43,6 @@ export default function AdminProducts() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // Fetch on mount
   useEffect(() => {
     fetchProducts();
     fetchCategories();
@@ -79,10 +78,9 @@ export default function AdminProducts() {
     currentPage * itemsPerPage
   );
 
-  // Deletion
+  // Delete handlers
   const confirmDeletion = (id) => setConfirmDeleteId(id);
   const cancelDeletion = () => setConfirmDeleteId(null);
-
   const handleDelete = async () => {
     if (!confirmDeleteId) return;
     setDeletingId(confirmDeleteId);
@@ -98,13 +96,17 @@ export default function AdminProducts() {
     }
   };
 
-  // Edit
+  // Edit form handlers
   const startEdit = (prod) => {
-    setEditingProduct(prod._id);
+    setEditingProduct(prod._1d);
     setFormData({
       name: prod.name || '',
       description: prod.description || '',
-      price: prod.price?.toString() || '',
+      price: prod.price
+        ? prod.price
+            .toString()
+            .replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+        : '',
       stock: prod.stock?.toString() || '',
       category: prod.category?._id || '',
       discount: prod.discount?.toString() || '',
@@ -126,9 +128,18 @@ export default function AdminProducts() {
       images: [''],
     });
 
+  // Handle change, with live formatting on price
   const handleChange = (e, idx = null) => {
     const { name, value, checked } = e.target;
-    if (name === 'images') {
+    if (name === 'price') {
+      let cleaned = value.replace(/,/g, '').replace(/[^\d.]/g, '');
+      const [intPart, decPart] = cleaned.split('.');
+      const formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      const formatted = decPart !== undefined
+        ? `${formattedInt}.${decPart.slice(0, 2)}`
+        : formattedInt;
+      setFormData((f) => ({ ...f, price: formatted }));
+    } else if (name === 'images') {
       const imgs = [...formData.images];
       imgs[idx] = value;
       setFormData((f) => ({ ...f, images: imgs }));
@@ -144,6 +155,7 @@ export default function AdminProducts() {
   const removeImageField = (idx) =>
     setFormData((f) => ({ ...f, images: f.images.filter((_, i) => i !== idx) }));
 
+  // Upload image
   const uploadToCloudinary = async (file, slotIdx) => {
     const body = new FormData();
     body.append('file', file);
@@ -172,6 +184,7 @@ export default function AdminProducts() {
     }
   };
 
+  // Toggle featured
   const toggleFeaturedInline = async (prod) => {
     try {
       await api.put(`/api/products/${prod._id}`, {
@@ -183,16 +196,22 @@ export default function AdminProducts() {
     }
   };
 
+  // Submit form
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.name || !formData.price || !formData.stock || !formData.category) {
+    if (
+      !formData.name ||
+      !formData.price ||
+      !formData.stock ||
+      !formData.category
+    ) {
       toast.error('Name, price, stock & category are required.');
       return;
     }
     const discount = Math.max(0, parseFloat(formData.discount) || 0);
     const payload = {
       ...formData,
-      price: parseFloat(formData.price),
+      price: parseFloat(formData.price.replace(/,/g, '')),
       stock: parseInt(formData.stock, 10),
       discount,
       images: formData.images.filter((u) => u.trim()),
@@ -271,8 +290,6 @@ export default function AdminProducts() {
               <input
                 id="price"
                 name="price"
-                type="number"
-                step="0.01"
                 value={formData.price}
                 onChange={handleChange}
                 required
@@ -311,9 +328,7 @@ export default function AdminProducts() {
             >
               <option value="">-- Select --</option>
               {categories.map((cat) => (
-                <option key={cat._id} value={cat._id}>
-                  {cat.name}
-                </option>
+                <option key={cat._id} value={cat._id}>{cat.name}</option>
               ))}
             </select>
           </div>
@@ -356,13 +371,9 @@ export default function AdminProducts() {
             {formData.images.map((url, idx) => (
               <div key={idx} className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
                 {url ? (
-                  <img
-                    src={url}
-                    alt=""
-                    className="h-32 w-32 rounded-lg border border-neutral-200 object-cover"
-                  />
+                  <img src={url} alt="" className="h-32 w-32 rounded-lg border object-cover" />
                 ) : (
-                  <div className="flex h-32 w-32 items-center justify-center rounded-lg border border-neutral-200 bg-neutral-100 text-neutral-400">
+                  <div className="flex h-32 w-32 items-center justify-center rounded-lg border bg-neutral-100 text-neutral-400">
                     No image
                   </div>
                 )}
@@ -371,11 +382,7 @@ export default function AdminProducts() {
                     htmlFor={`file-input-${idx}`}
                     className="inline-flex cursor-pointer items-center rounded-2xl bg-primary-600 px-4 py-2 text-white hover:bg-primary-700"
                   >
-                    {uploadingIdx === idx
-                      ? 'Uploading…'
-                      : url
-                      ? 'Change File'
-                      : 'Choose File'}
+                    {uploadingIdx === idx ? 'Uploading…' : url ? 'Change File' : 'Choose File'}
                     <input
                       id={`file-input-${idx}`}
                       type="file"
@@ -455,7 +462,7 @@ export default function AdminProducts() {
           <table className="min-w-full">
             <thead className="bg-neutral-100 sticky top-0 z-10">
               <tr>
-                <th className="px-4 py-2 text-left text-sm font-medium">Name</th> 
+                <th className="px-4 py-2 text-left text-sm font-medium">Name</th>
                 <th className="px-4 py-2 text-right text-sm font-medium">Price</th>
                 <th className="px-4 py-2 text-right text-sm font-medium">Discount</th>
                 <th className="px-4 py-2 text-right text-sm font-medium">Disc. Price</th>
@@ -479,7 +486,7 @@ export default function AdminProducts() {
                     transition={{ delay: i * 0.03 }}
                     className="border-b even:bg-white hover:bg-neutral-50"
                   >
-                    <td className="px_4 py-2">{prod.name}</td>
+                    <td className="px-4 py-2">{prod.name}</td>
                     <td className="px-4 py-2 text-right">{formatPrice(price)}</td>
                     <td className="px-4 py-2 text-right">{disc.toFixed(2)}%</td>
                     <td className="px-4 py-2 text-right font-semibold">
