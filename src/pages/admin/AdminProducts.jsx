@@ -10,7 +10,7 @@ import { Trash2, Edit3 } from 'lucide-react';
 const CLOUDINARY_UPLOAD_URL = 'https://api.cloudinary.com/v1_1/dhubit7vj/upload';
 const UPLOAD_PRESET = 'estore';
 
-// Format numbers like "Tsh.2,250,000.00/="
+// Format prices like "Tsh.2,250,000.00/="
 const formatPrice = (price) =>
   `Tsh.${price.toLocaleString('en-TZ', {
     minimumFractionDigits: 2,
@@ -43,7 +43,7 @@ export default function AdminProducts() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // Fetch products & categories on mount
+  // Fetch on mount
   useEffect(() => {
     fetchProducts();
     fetchCategories();
@@ -69,7 +69,7 @@ export default function AdminProducts() {
     }
   };
 
-  // Filter & paginate list
+  // Filter & paginate
   const filtered = products.filter((p) =>
     p.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -79,7 +79,7 @@ export default function AdminProducts() {
     currentPage * itemsPerPage
   );
 
-  // Delete handlers
+  // Deletion
   const confirmDeletion = (id) => setConfirmDeleteId(id);
   const cancelDeletion = () => setConfirmDeleteId(null);
 
@@ -98,7 +98,7 @@ export default function AdminProducts() {
     }
   };
 
-  // Edit form handlers
+  // Edit
   const startEdit = (prod) => {
     setEditingProduct(prod._id);
     setFormData({
@@ -113,9 +113,8 @@ export default function AdminProducts() {
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
-
-  const resetForm = () => {
-    setEditingProduct(null);
+  const resetForm = () =>
+    setEditingProduct(null) ||
     setFormData({
       name: '',
       description: '',
@@ -126,7 +125,6 @@ export default function AdminProducts() {
       isFeatured: false,
       images: [''],
     });
-  };
 
   const handleChange = (e, idx = null) => {
     const { name, value, checked } = e.target;
@@ -146,7 +144,6 @@ export default function AdminProducts() {
   const removeImageField = (idx) =>
     setFormData((f) => ({ ...f, images: f.images.filter((_, i) => i !== idx) }));
 
-  // Upload image
   const uploadToCloudinary = async (file, slotIdx) => {
     const body = new FormData();
     body.append('file', file);
@@ -161,7 +158,6 @@ export default function AdminProducts() {
       setUploadingIdx(null);
     }
   };
-
   const handleFileInput = async (e, idx) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -176,17 +172,17 @@ export default function AdminProducts() {
     }
   };
 
-  // Toggle featured
   const toggleFeaturedInline = async (prod) => {
     try {
-      await api.put(`/api/products/${prod._id}`, { isFeatured: !prod.isFeatured });
+      await api.put(`/api/products/${prod._id}`, {
+        isFeatured: !prod.isFeatured,
+      });
       fetchProducts();
     } catch {
       toast.error('Failed to update status.');
     }
   };
 
-  // Submit add/edit
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.name || !formData.price || !formData.stock || !formData.category) {
@@ -250,6 +246,7 @@ export default function AdminProducts() {
               className="mt-1 block w-full rounded-2xl border border-neutral-300 bg-neutral-50 px-3 py-2 shadow-inner focus:outline-none focus:ring-2 focus:ring-primary-300"
             />
           </div>
+
           {/* Description */}
           <div>
             <label className="block text-sm font-medium text-neutral-700" htmlFor="description">
@@ -264,6 +261,7 @@ export default function AdminProducts() {
               className="mt-1 block w-full rounded-2xl border border-neutral-300 bg-neutral-50 px-3 py-2 shadow-inner focus:outline-none focus:ring-2 focus:ring-primary-300 resize-none leading-relaxed"
             />
           </div>
+
           {/* Price & Stock */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -297,6 +295,7 @@ export default function AdminProducts() {
               />
             </div>
           </div>
+
           {/* Category */}
           <div>
             <label className="block text-sm font-medium text-neutral-700" htmlFor="category">
@@ -318,6 +317,7 @@ export default function AdminProducts() {
               ))}
             </select>
           </div>
+
           {/* Discount & Featured */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -349,6 +349,7 @@ export default function AdminProducts() {
               </label>
             </div>
           </div>
+
           {/* Images */}
           <div className="space-y-4">
             <p className="text-sm font-medium text-neutral-700">Images</p>
@@ -411,6 +412,7 @@ export default function AdminProducts() {
               + Add slot
             </button>
           </div>
+
           {/* Submit & Cancel */}
           <div className="flex space-x-4 mt-4">
             <AnimatedButton
@@ -453,7 +455,7 @@ export default function AdminProducts() {
           <table className="min-w-full">
             <thead className="bg-neutral-100 sticky top-0 z-10">
               <tr>
-                <th className="px-4 py-2 text-left text-sm font-medium">Name</th>
+                <th className="px-4 py-2 text-left text-sm font-medium">Name</th> 
                 <th className="px-4 py-2 text-right text-sm font-medium">Price</th>
                 <th className="px-4 py-2 text-right text-sm font-medium">Discount</th>
                 <th className="px-4 py-2 text-right text-sm font-medium">Disc. Price</th>
@@ -461,7 +463,6 @@ export default function AdminProducts() {
                 <th className="px-4 py-2 text-left text-sm font-medium">Category</th>
                 <th className="px-4 py-2 text-center text-sm font-medium">Feat.</th>
                 <th className="px-4 py-2 text-left text-sm font-medium">Images</th>
-                <th className="px-4 py-2 text-left text-sm font-medium">Desc.</th>
                 <th className="px-4 py-2 text-center text-sm font-medium">Actions</th>
               </tr>
             </thead>
@@ -478,7 +479,7 @@ export default function AdminProducts() {
                     transition={{ delay: i * 0.03 }}
                     className="border-b even:bg-white hover:bg-neutral-50"
                   >
-                    <td className="px-4 py-2">{prod.name}</td>
+                    <td className="px_4 py-2">{prod.name}</td>
                     <td className="px-4 py-2 text-right">{formatPrice(price)}</td>
                     <td className="px-4 py-2 text-right">{disc.toFixed(2)}%</td>
                     <td className="px-4 py-2 text-right font-semibold">
@@ -503,7 +504,6 @@ export default function AdminProducts() {
                         '—'
                       )}
                     </td>
-                    <td className="px-4 py-2 max-w-xs truncate">{prod.description || '—'}</td>
                     <td className="px-4 py-2 text-center space-x-2">
                       <button onClick={() => startEdit(prod)}>
                         <Edit3 size={18} className="text-blue-600 hover:text-blue-800" />
@@ -523,12 +523,10 @@ export default function AdminProducts() {
           </p>
         )}
 
-        {/* Pagination */}
         {filtered.length > itemsPerPage && (
           <div className="flex items-center justify-between px-6 py-4">
             <p className="text-sm text-neutral-600">
-              Showing{' '}
-              {(currentPage - 1) * itemsPerPage + 1}– 
+              Showing {(currentPage - 1) * itemsPerPage + 1}–{' '}
               {Math.min(currentPage * itemsPerPage, filtered.length)} of {filtered.length}
             </p>
             <div className="flex space-x-2">
@@ -544,9 +542,7 @@ export default function AdminProducts() {
                   key={idx}
                   onClick={() => setCurrentPage(idx + 1)}
                   className={`rounded-2xl px-3 py-1 ${
-                    currentPage === idx + 1
-                      ? 'bg-primary-600 text-white'
-                      : 'bg-neutral-200'
+                    currentPage === idx + 1 ? 'bg-primary-600 text-white' : 'bg-neutral-200'
                   }`}
                 >
                   {idx + 1}
