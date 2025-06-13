@@ -1,5 +1,5 @@
 // src/pages/Home.jsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { motion } from 'framer-motion';
@@ -23,7 +23,7 @@ function ProductCardSkeleton() {
       <div className="h-4 bg-neutral-100 rounded mt-2 w-1/2" />
       <div className="mt-auto pt-4 h-6 bg-neutral-100 rounded w-1/3" />
     </div>
-  );
+  )
 }
 
 // Reusable product card
@@ -36,9 +36,7 @@ function ProductCard({ product }) {
   const tiltVariants = {
     rest: { rotateX: 0, rotateY: 0, scale: 1 },
     hover: {
-      rotateX: 5,
-      rotateY: -5,
-      scale: 1.03,
+      rotateX: 5, rotateY: -5, scale: 1.03,
       transition: { duration: 0.3, ease: 'easeOut' },
     },
     tap: { scale: 0.98 },
@@ -48,10 +46,7 @@ function ProductCard({ product }) {
     <Link to={`/products/${product._id}`} className="block group" aria-label={product.name}>
       <motion.div
         style={{ perspective: 1000 }}
-        initial="rest"
-        whileHover="hover"
-        whileTap="tap"
-        animate="rest"
+        initial="rest" whileHover="hover" whileTap="tap" animate="rest"
         variants={tiltVariants}
         className="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition p-4 flex flex-col h-full"
       >
@@ -61,13 +56,11 @@ function ProductCard({ product }) {
               {product.discount}% OFF
             </span>
           )}
-          {Array.isArray(product.images) && product.images.length > 0 ? (
+          {product.images?.[0] ? (
             <motion.img
-              src={product.images[0]}
-              alt={product.name}
+              src={product.images[0]} alt={product.name}
               className="w-full h-48 object-cover"
-              whileHover={{ scale: 1.05 }}
-              transition={{ duration: 0.3 }}
+              whileHover={{ scale: 1.05 }} transition={{ duration: 0.3 }}
             />
           ) : (
             <div className="w-full h-48 bg-neutral-100 flex items-center justify-center">
@@ -75,12 +68,10 @@ function ProductCard({ product }) {
             </div>
           )}
         </div>
-
         <div className="mt-4 flex flex-col flex-grow">
           <h3 className="text-lg font-medium text-neutral-800 hover:text-accent-600 transition">
             {product.name}
           </h3>
-
           <div className="mt-2 flex items-baseline space-x-2">
             {hasDiscount ? (
               <>
@@ -97,17 +88,14 @@ function ProductCard({ product }) {
               </span>
             )}
           </div>
-
           <p className="mt-1 text-sm text-neutral-500">
             {product.category?.name || 'Uncategorized'}
           </p>
-
           <div className="mt-2 flex items-center text-sm">
             <FaStar className="text-yellow-500 mr-1" />
             <span className="text-neutral-700">{(product.avgRating ?? 0).toFixed(1)}</span>
             <span className="ml-2 text-neutral-500">({product.totalReviews ?? 0})</span>
           </div>
-
           <div className="mt-auto pt-4 flex flex-wrap gap-2 justify-between items-center">
             {hasDiscount && (
               <span className="inline-block px-2 py-1 bg-accent-100 text-accent-700 text-xs font-medium rounded-full">
@@ -125,7 +113,7 @@ function ProductCard({ product }) {
         </div>
       </motion.div>
     </Link>
-  );
+  )
 }
 
 export default function Home() {
@@ -134,8 +122,11 @@ export default function Home() {
   const [loadingFeatured, setLoadingFeatured] = useState(true);
   const [loadingOffers, setLoadingOffers] = useState(true);
 
+  const offersRef = useRef([]);
+  const [offerIndex, setOfferIndex] = useState(0);
+
   useEffect(() => {
-    // Fetch most recently uploaded featured products
+    // Fetch newest featured
     const fetchFeatured = async () => {
       try {
         const { data } = await api.get('/api/products', {
@@ -148,28 +139,51 @@ export default function Home() {
         setLoadingFeatured(false);
       }
     };
-
-    // Fetch most recently uploaded discounted products
+    // Fetch discounted then shuffle
     const fetchOffers = async () => {
       try {
         const { data } = await api.get('/api/products', {
-          params: { discounted: true, sort: 'createdAt_desc', limit: 4 },
+          params: { discounted: true, sort: 'createdAt_desc', limit: 8 },
         });
-        setOffers(data.products || []);
+        const arr = data.products || [];
+        // shuffle
+        for (let i = arr.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        offersRef.current = arr;
+        setOffers(arr.slice(0, 4));
       } catch {
         setOffers([]);
       } finally {
         setLoadingOffers(false);
       }
     };
-
     fetchFeatured();
     fetchOffers();
   }, []);
 
+  // Auto-swipe offers every 3s
+  useEffect(() => {
+    if (offersRef.current.length === 0) return;
+    const interval = setInterval(() => {
+      setOfferIndex((idx) => {
+        const next = (idx + 1) % offersRef.current.length;
+        // show next 4
+        const start = next;
+        setOffers([
+          ...offersRef.current.slice(start, start + 4),
+          ...offersRef.current.slice(0, Math.max(0, start + 4 - offersRef.current.length))
+        ]);
+        return next;
+      });
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [offersRef.current]);
+
   return (
     <div className="space-y-20">
-      {/* Hero Section */}
+      {/* Hero */}
       <section className="relative bg-gradient-to-r from-primary-100 to-primary-50 py-20 rounded-2xl shadow-card overflow-hidden">
         <div className="absolute inset-0 opacity-10 bg-[url('/hero-bg.svg')] bg-center bg-no-repeat" />
         <div className="relative max-w-3xl mx-auto text-center px-6 space-y-6">
@@ -189,45 +203,46 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Featured Products */}
+      {/* Featured */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
         <h2 className="text-3xl font-semibold text-neutral-800">Featured Products</h2>
         {loadingFeatured ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {[...Array(4)].map((_, i) => (
-              <ProductCardSkeleton key={i} />
-            ))}
+            {[...Array(4)].map((_, i) => <ProductCardSkeleton key={i} />)}
           </div>
         ) : featured.length === 0 ? (
-          <p className="text-center text-neutral-500">No featured products available.</p>
+          <p className="text-center text-neutral-500">No featured products.</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {featured.map((product) => (
-              <ProductCard key={product._id} product={product} />
-            ))}
+            {featured.map((p) => <ProductCard key={p._id} product={p} />)}
           </div>
         )}
       </section>
 
-      {/* Offers & Discounts */}
+      {/* Offers & Discounts carousel */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
         <h2 className="text-3xl font-semibold text-neutral-800">Offers & Discounts</h2>
         {loadingOffers ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {[...Array(4)].map((_, i) => (
-              <ProductCardSkeleton key={i} />
-            ))}
+            {[...Array(4)].map((_, i) => <ProductCardSkeleton key={i} />)}
           </div>
         ) : offers.length === 0 ? (
-          <p className="text-center text-neutral-500">No current offers available.</p>
+          <p className="text-center text-neutral-500">No current offers.</p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {offers.map((product) => (
-              <ProductCard key={product._id} product={product} />
-            ))}
+          <div className="relative overflow-hidden">
+            <motion.div
+              key={offerIndex}
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ duration: 0.5 }}
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8"
+            >
+              {offers.map((p) => <ProductCard key={p._id} product={p} />)}
+            </motion.div>
           </div>
         )}
       </section>
     </div>
-  );
+);
 }
