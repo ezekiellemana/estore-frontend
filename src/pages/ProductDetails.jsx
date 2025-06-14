@@ -96,9 +96,15 @@ export default function ProductDetails() {
   );
   const goToPage = (page) => page >= 1 && page <= totalPages && setCurrentPage(page);
 
+  // Add to cart handler with auth check
   const handleAddToCart = async () => {
-    if (!user) return setShowAuthModal(true);
-    if (product.stock < 1) return toast.error('Out of stock.');
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
+    if (product.stock < 1) {
+      return toast.error('Out of stock.');
+    }
     try {
       await api.post('/api/cart', { productId: product._id, quantity: 1 });
       toast.success('Added to cart.');
@@ -109,8 +115,13 @@ export default function ProductDetails() {
     }
   };
 
+  // Submit review handler with auth check
   const submitReview = async (e) => {
     e.preventDefault();
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
     if (newRating < 1 || !newComment.trim()) {
       return toast.error('Provide both rating and comment.');
     }
@@ -127,9 +138,12 @@ export default function ProductDetails() {
       setReviews(data);
       setCurrentPage(1);
     } catch (err) {
-      console.error(err);
-      if (err.response?.status === 401) setShowAuthModal(true);
-      else toast.error(err.response?.data?.error || 'Failed to submit review.');
+      console.error('Failed to submit review:', err);
+      if (err.response?.status === 401) {
+        setShowAuthModal(true);
+      } else {
+        toast.error(err.response?.data?.error || 'Failed to submit review.');
+      }
     } finally {
       setSubmittingReview(false);
     }
@@ -148,24 +162,30 @@ export default function ProductDetails() {
           <div>
             {product.images?.length ? (
               <>
-                <img
-                  src={product.images[selectedImageIndex]}
-                  alt={`${product.name} image ${selectedImageIndex + 1}`}
-                  className="w-full h-80 object-cover rounded-2xl border"
-                  loading="lazy"
-                />
+                <div className="w-full h-80 overflow-hidden rounded-2xl border">
+                  <img
+                    src={product.images[selectedImageIndex]}
+                    alt={`${product.name} image ${selectedImageIndex + 1}`}
+                    loading="lazy"
+                    className="w-full h-full object-cover object-center transition-transform duration-300 hover:scale-105"
+                  />
+                </div>
                 <div className="mt-4 flex space-x-2 overflow-x-auto">
                   {product.images.map((img, idx) => (
                     <button
                       key={idx}
                       onClick={() => setSelectedImageIndex(idx)}
-                      className={`w-16 h-16 rounded-lg overflow-hidden border-2 ${
+                      className={`w-16 h-16 overflow-hidden rounded-lg border-2 ${
                         idx === selectedImageIndex
                           ? 'border-accent-500'
                           : 'border-transparent hover:border-neutral-300'
                       }`}
                     >
-                      <img src={img} alt={`Thumb ${idx + 1}`} className="w-full h-full object-cover" />
+                      <img
+                        src={img}
+                        alt={`Thumb ${idx + 1}`}
+                        className="w-full h-full object-cover object-center transition-transform duration-200 hover:scale-110"
+                      />
                     </button>
                   ))}
                 </div>
@@ -348,7 +368,7 @@ export default function ProductDetails() {
               className="bg-white rounded-2xl p-6 text-center shadow-lg w-80 break-words"
             >
               <h3 className="text-xl font-bold mb-2">Please Log In</h3>
-              <p className="text-neutral-600 mb-4">You need to be logged in to add items to your cart.</p>
+              <p className="text-neutral-600 mb-4">You need to be logged in to add items or reviews.</p>
               <div className="flex justify-center gap-4 flex-wrap">
                 <Link to="/login">
                   <button className="bg-primary-600 text-white px-4 py-2 rounded-2xl hover:bg-primary-700 text-sm">
