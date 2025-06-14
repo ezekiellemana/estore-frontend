@@ -162,7 +162,7 @@ export default function ProductDetails() {
           <div>
             {product.images?.length ? (
               <>
-                <div className="w-full h-80 overflow-hidden rounded-2xl border">
+                <div className="w-full h-96 overflow-hidden rounded-2xl border">
                   <img
                     src={product.images[selectedImageIndex]}
                     alt={`${product.name} image ${selectedImageIndex + 1}`}
@@ -175,7 +175,7 @@ export default function ProductDetails() {
                     <button
                       key={idx}
                       onClick={() => setSelectedImageIndex(idx)}
-                      className={`w-16 h-16 overflow-hidden rounded-lg border-2 ${
+                      className={`w-20 h-20 overflow-hidden rounded-lg border-2 ${
                         idx === selectedImageIndex
                           ? 'border-accent-500'
                           : 'border-transparent hover:border-neutral-300'
@@ -191,7 +191,7 @@ export default function ProductDetails() {
                 </div>
               </>
             ) : (
-              <div className="w-full h-80 bg-neutral-100 rounded-2xl flex items-center justify-center">
+              <div className="w-full h-96 bg-neutral-100 rounded-2xl flex items-center justify-center">
                 <span className="text-neutral-500">No image</span>
               </div>
             )}
