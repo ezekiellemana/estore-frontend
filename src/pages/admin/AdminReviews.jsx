@@ -53,6 +53,7 @@ export default function AdminReviews() {
     URL.revokeObjectURL(url)
   }
 
+  // fetch all reviews
   const fetchAll = async () => {
     setLoading(true)
     try {
@@ -73,7 +74,6 @@ export default function AdminReviews() {
   // filter logic
   const filtered = reviews
     .filter(r => {
-      // search in user name/email & product name
       const term = searchTerm.trim().toLowerCase()
       if (term) {
         const inUser = r.user?.name?.toLowerCase().includes(term) ||
@@ -81,44 +81,40 @@ export default function AdminReviews() {
         const inProd = r.product?.name?.toLowerCase().includes(term)
         if (!inUser && !inProd) return false
       }
-      // rating filter
       if (ratingFilter !== 'all' && r.rating !== Number(ratingFilter)) return false
-      // date filter
       const created = new Date(r.createdAt).toISOString().split('T')[0]
       if (startDate && created < startDate) return false
       if (endDate && created > endDate) return false
       return true
     })
-    // sort
     .sort((a, b) => {
       const dir = sortDir === 'asc' ? 1 : -1
       if (sortBy === 'rating') return dir * (a.rating - b.rating)
-      // date
       return dir * (new Date(a.createdAt) - new Date(b.createdAt))
     })
 
   // pagination
-  const totalPages = Math.ceil(filtered.length / reviewsPerPage) || 1
+  const totalPages = Math.max(Math.ceil(filtered.length / reviewsPerPage), 1)
   const startIdx = (currentPage - 1) * reviewsPerPage
   const currentReviews = filtered.slice(startIdx, startIdx + reviewsPerPage)
 
   // handlers
-  const toggleSort = (col) => {
+  const toggleSort = col => {
     if (sortBy === col) {
-      setSortDir(sortDir === 'asc' ? 'desc' : 'asc')
+      setSortDir(dir => (dir === 'asc' ? 'desc' : 'asc'))
     } else {
       setSortBy(col)
       setSortDir('asc')
     }
   }
 
-  const toggleSelect = (id) => {
+  const toggleSelect = id => {
     const s = new Set(selectedIds)
     s.has(id) ? s.delete(id) : s.add(id)
     setSelectedIds(s)
   }
 
-  const selectAllOnPage = (chk) => {
+  const selectAllOnPage = chk => {
     const s = new Set(selectedIds)
     currentReviews.forEach(r => {
       if (chk) s.add(r._id)
@@ -127,7 +123,7 @@ export default function AdminReviews() {
     setSelectedIds(s)
   }
 
-  const confirmDeletion = (id) => setConfirmDeleteId(id)
+  const confirmDeletion = id => setConfirmDeleteId(id)
   const cancelDeletion = () => setConfirmDeleteId(null)
 
   const handleDelete = async () => {
@@ -265,7 +261,7 @@ export default function AdminReviews() {
         <table className="min-w-full text-left">
           <thead className="bg-neutral-100 sticky top-0 z-10">
             <tr>
-              <th className="px-4 py-2"><!-- checkbox col --></th>
+              <th className="px-4 py-2">{/* checkbox col */}</th>
               <th className="px-4 py-2">Product</th>
               <th className="px-4 py-2">User</th>
               <th
