@@ -1,527 +1,371 @@
 // src/pages/admin/AdminAnalyticsCharts.jsx
-
-import React, { useEffect, useState } from 'react';
-import api from '../../services/api';
-import { toast } from 'react-toastify';
+import React, { useEffect, useState, useRef } from 'react'
+import api from '../../services/api'
+import { toast } from 'react-toastify'
 import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
-  ResponsiveContainer,
-} from 'recharts';
-import { motion } from 'framer-motion';
-import AnimatedButton from '../../components/AnimatedButton';
+  LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid,
+  BarChart, Bar, PieChart, Pie, Cell, Legend, ResponsiveContainer
+} from 'recharts'
+import { motion } from 'framer-motion'
+import AnimatedButton from '../../components/AnimatedButton'
 
 export default function AdminAnalyticsCharts() {
   // 1) Summary counts
-  const [counts, setCounts] = useState(null);
-
+  const [counts, setCounts] = useState(null)
   // 2) Sales data + date filters
-  const [salesData, setSalesData] = useState([]);
+  const [salesData, setSalesData] = useState([])
   const [startDate, setStartDate] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 30);
-    return d.toISOString().split('T')[0];
-  });
-  const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
+    const d = new Date()
+    d.setDate(d.getDate() - 30)
+    return d.toISOString().split('T')[0]
+  })
+  const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0])
+  // 3) Top products
+  const [topProducts, setTopProducts] = useState([])
+  // 4) Category sales
+  const [categorySales, setCategorySales] = useState([])
+  // 5) Recent orders
+  const [recentOrders, setRecentOrders] = useState([])
+  // 6) Top customers
+  const [topCustomers, setTopCustomers] = useState([])
+  // 7) Low‐stock alerts + threshold
+  const [lowInventory, setLowInventory] = useState([])
+  const [threshold, setThreshold] = useState(10)
 
-  // 3) Top products + category sales
-  const [topProducts, setTopProducts] = useState([]);
-  const [categorySales, setCategorySales] = useState([]);
+  // loading state for “Refresh Data”
+  const [loadingAll, setLoadingAll] = useState(false)
+  const firstMount = useRef(true)
 
-  // 4) Recent orders
-  const [recentOrders, setRecentOrders] = useState([]);
+  const COLORS = ['#7C3AED', '#A78BFA', '#C084FC', '#DDD6FE', '#EDE9FE']
 
-  // 5) Top customers
-  const [topCustomers, setTopCustomers] = useState([]);
+  // util: export array of objects to CSV
+  const exportCSV = (data, columns, filename) => {
+    if (!data || !data.length) {
+      toast.error('No data to export.')
+      return
+    }
+    const header = columns.map((c) => c.label).join(',') + '\n'
+    const rows = data
+      .map((row) =>
+        columns
+          .map((c) => {
+            const v = row[c.key]
+            // escape quotes
+            return `"${(v ?? '').toString().replace(/"/g, '""')}"`
+          })
+          .join(',')
+      )
+      .join('\n')
+    const csv = header + rows
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename + '.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
 
-  // 6) Low‐inventory alerts
-  const [lowInventory, setLowInventory] = useState([]);
+  // fetchers
+  const fetchCounts = async () => {
+    try {
+      const { data } = await api.get('/api/admin/analytics/counts')
+      setCounts(data)
+    } catch (err) {
+      console.error(err)
+      toast.error('Failed to load summary counts.')
+      setCounts({ users: 0, products: 0, orders: 0, reviews: 0 })
+    }
+  }
+  const fetchSales = async () => {
+    try {
+      const { data } = await api.get('/api/admin/analytics/sales', {
+        params: { start: startDate, end: endDate },
+      })
+      setSalesData(Array.isArray(data) ? data : [])
+    } catch (err) {
+      console.error(err)
+      toast.error('Failed to load sales data.')
+      setSalesData([])
+    }
+  }
+  const fetchTopProducts = async () => {
+    try {
+      const { data } = await api.get('/api/admin/analytics/top-products', {
+        params: { limit: 5, start: startDate, end: endDate },
+      })
+      setTopProducts(Array.isArray(data) ? data : [])
+    } catch (err) {
+      console.error(err)
+      toast.error('Failed to load top products.')
+      setTopProducts([])
+    }
+  }
+  const fetchCategorySales = async () => {
+    try {
+      const { data } = await api.get('/api/admin/analytics/category-sales')
+      setCategorySales(Array.isArray(data) ? data : [])
+    } catch (err) {
+      console.error(err)
+      toast.error('Failed to load category sales.')
+      setCategorySales([])
+    }
+  }
+  const fetchRecentOrders = async () => {
+    try {
+      const { data } = await api.get('/api/admin/orders', {
+        params: { limit: 5, sort: 'createdAt_desc' },
+      })
+      setRecentOrders(Array.isArray(data) ? data : [])
+    } catch (err) {
+      console.error(err)
+      toast.error('Failed to load recent orders.')
+      setRecentOrders([])
+    }
+  }
+  const fetchTopCustomers = async () => {
+    try {
+      const { data } = await api.get('/api/admin/analytics/top-customers', {
+        params: { limit: 5 },
+      })
+      setTopCustomers(data?.customers ?? [])
+    } catch (err) {
+      console.error(err)
+      toast.error('Failed to load top customers.')
+      setTopCustomers([])
+    }
+  }
+  const fetchLowInventory = async () => {
+    try {
+      const { data } = await api.get('/api/admin/analytics/low-stock', {
+        params: { threshold },
+      })
+      setLowInventory(data?.products ?? [])
+    } catch (err) {
+      console.error(err)
+      toast.error('Failed to load low-stock alerts.')
+      setLowInventory([])
+    }
+  }
 
-  // Custom color palette
-  const COLORS = ['#7C3AED', '#A78BFA', '#C084FC', '#DDD6FE', '#EDE9FE'];
+  // run all
+  const fetchAll = async () => {
+    setLoadingAll(true)
+    await Promise.all([
+      fetchCounts(),
+      fetchSales(),
+      fetchTopProducts(),
+      fetchCategorySales(),
+      fetchRecentOrders(),
+      fetchTopCustomers(),
+      fetchLowInventory(),
+    ])
+    setLoadingAll(false)
+  }
 
+  // on mount + when range or threshold changes
   useEffect(() => {
-    const fetchCounts = async () => {
-      try {
-        const { data } = await api.get('/api/admin/analytics/counts');
-        setCounts(data);
-      } catch (err) {
-        console.error(err);
-        toast.error('Failed to load summary counts.');
-        setCounts({ users: 0, products: 0, orders: 0, reviews: 0 });
-      }
-    };
+    if (firstMount.current) {
+      firstMount.current = false
+      fetchAll()
+    } else {
+      fetchAll()
+    }
+  }, [startDate, endDate, threshold])
 
-    const fetchSales = async () => {
-      try {
-        const { data } = await api.get('/api/admin/analytics/sales', {
-          params: { start: startDate, end: endDate },
-        });
-        if (Array.isArray(data)) {
-          setSalesData(data);
-        } else {
-          setSalesData([]);
-          console.warn('Sales endpoint did not return an array:', data);
-        }
-      } catch (err) {
-        console.error(err);
-        toast.error('Failed to load sales data.');
-        setSalesData([]);
-      }
-    };
+  const totalSalesRange = salesData.reduce((sum, e) => sum + (e.totalSales || 0), 0)
 
-    const fetchTopProducts = async () => {
-      try {
-        const { data } = await api.get('/api/admin/analytics/top-products', {
-          params: { limit: 5, start: startDate, end: endDate },
-        });
-        if (Array.isArray(data)) {
-          setTopProducts(data);
-        } else {
-          setTopProducts([]);
-          console.warn('Top-products endpoint did not return an array:', data);
-        }
-      } catch (err) {
-        console.error(err);
-        toast.error('Failed to load top products.');
-        setTopProducts([]);
-      }
-    };
-
-    const fetchCategorySales = async () => {
-      try {
-        const { data } = await api.get('/api/admin/analytics/category-sales');
-        if (Array.isArray(data)) {
-          setCategorySales(data);
-        } else {
-          setCategorySales([]);
-          console.warn('Category-sales endpoint did not return an array:', data);
-        }
-      } catch (err) {
-        console.error(err);
-        toast.error('Failed to load category sales.');
-        setCategorySales([]);
-      }
-    };
-
-    const fetchRecentOrders = async () => {
-      try {
-        const { data } = await api.get('/api/admin/orders', {
-          params: { limit: 5, sort: 'createdAt_desc' },
-        });
-        if (Array.isArray(data)) {
-          setRecentOrders(data);
-        } else {
-          setRecentOrders([]);
-          console.warn('Admin-orders endpoint did not return an array:', data);
-        }
-      } catch (err) {
-        console.error(err);
-        toast.error('Failed to load recent orders.');
-        setRecentOrders([]);
-      }
-    };
-
-    const fetchTopCustomers = async () => {
-      try {
-        const { data } = await api.get('/api/admin/analytics/top-customers', {
-          params: { limit: 5 },
-        });
-        if (data && Array.isArray(data.customers)) {
-          setTopCustomers(data.customers);
-        } else {
-          setTopCustomers([]);
-          console.warn('Top-customers endpoint did not return data.customers array:', data);
-        }
-      } catch (err) {
-        console.error(err);
-        toast.error('Failed to load top customers.');
-        setTopCustomers([]);
-      }
-    };
-
-    const fetchLowInventory = async () => {
-      try {
-        const { data } = await api.get('/api/admin/analytics/low-stock', {
-          params: { threshold: 10 },
-        });
-        if (data && Array.isArray(data.products)) {
-          setLowInventory(data.products);
-        } else {
-          setLowInventory([]);
-          console.warn('Low-stock endpoint did not return data.products array:', data);
-        }
-      } catch (err) {
-        console.error(err);
-        toast.error('Failed to load inventory alerts.');
-        setLowInventory([]);
-      }
-    };
-
-    fetchCounts();
-    fetchSales();
-    fetchTopProducts();
-    fetchCategorySales();
-    fetchRecentOrders();
-    fetchTopCustomers();
-    fetchLowInventory();
-  }, [startDate, endDate]);
-
-  const totalSalesRange = Array.isArray(salesData)
-    ? salesData.reduce((sum, e) => sum + (e.totalSales || 0), 0)
-    : 0;
-
+  // for printing
   const handlePrint = () => {
-    const originalTitle = document.title;
-    document.title = `Report_${startDate}_to_${endDate}`;
-    window.print();
-    document.title = originalTitle;
-  };
+    const prev = document.title
+    document.title = `Analytics_${startDate}_to_${endDate}`
+    window.print()
+    document.title = prev
+  }
+
+  // presets
+  const applyPreset = (days) => {
+    const now = new Date()
+    const start = new Date()
+    start.setDate(now.getDate() - days)
+    setStartDate(start.toISOString().split('T')[0])
+    setEndDate(now.toISOString().split('T')[0])
+  }
 
   return (
-    <>
-      {/* Print-specific CSS */}
-      <style>
-        {`
-        /* Hide elements not needed in print */
-        @media print {
-          .no-print { display: none !important; }
-        }
+    <div className="p-6 space-y-8 max-w-full">
+      {/* Controls */}
+      <div className="flex flex-wrap gap-2 justify-end no-print">
+        <AnimatedButton
+          onClick={fetchAll}
+          disabled={loadingAll}
+          className="px-4 py-2 bg-purple-600 text-white rounded-2xl hover:bg-purple-700"
+        >
+          {loadingAll ? 'Refreshing…' : 'Refresh Data'}
+        </AnimatedButton>
+        <AnimatedButton
+          onClick={handlePrint}
+          className="px-4 py-2 bg-purple-500 text-white rounded-2xl hover:bg-purple-600"
+        >
+          Print Report
+        </AnimatedButton>
+      </div>
 
-        /* Reset backgrounds & shadows for print */
-        @media print {
-          body, 
-          .shadow-card, 
-          .border-l-4, 
-          .bg-white, 
-          .bg-neutral-50,
-          .bg-neutral-100,
-          .bg-neutral-200,
-          .bg-primary-50 {
-            background: #fff !important;
-            box-shadow: none !important;
-          }
-        }
-
-        /* Typography adjustments */
-        @media print {
-          h3, 
-          .text-xl, 
-          .font-semibold {
-            font-size: 18pt !important;
-            font-weight: bold !important;
-          }
-          p, td, th, label {
-            font-size: 10pt !important;
-            color: #000 !important;
-          }
-          .text-sm, .font-medium {
-            font-size: 9pt !important;
-          }
-        }
-
-        /* Tables: solid borders, no stripes */
-        @media print {
-          table {
-            width: 100% !important;
-            border-collapse: collapse !important;
-          }
-          th, td {
-            border: 1px solid #000 !important;
-            padding: 6px !important;
-            background: none !important;
-          }
-          thead tr {
-            background: #f0f0f0 !important;
-          }
-        }
-
-        /* Charts: make SVGs scale full width */
-        @media print {
-          .chart-container svg {
-            width: 100% !important;
-            height: auto !important;
-          }
-        }
-
-        /* Page breaks */
-        @media print {
-          .table-container, .chart-container {
-            page-break-inside: avoid !important;
-          }
-          .print-header {
-            page-break-after: avoid;
-          }
-          .section {
-            margin-bottom: 24px;
-          }
-        }
-
-        /* Enhanced header styling */
-        .print-header h2 {
-          font-size: 28px;
-          font-weight: 900;
-          text-transform: uppercase;
-          letter-spacing: 2px;
-          color: #7C3AED;  /* deep purple */
-          margin: 0;
-        }
-        .print-header p {
-          font-size: 12px;
-          letter-spacing: 1px;
-          margin-top: 4px;
-          color: #6D28D9; /* muted purple */
-        }
-        .print-header .underline {
-          width: 80px;
-          height: 4px;
-          background-color: #D8B4FE; /* lavender accent */
-          margin: 8px auto 0;
-        }
-
-        /* Also apply header styling in print mode */
-        @media print {
-          .print-header h2 { font-size: 32pt !important; letter-spacing: 3px; }
-          .print-header p { font-size: 10pt !important; }
-          .print-header .underline { height: 2px !important; background-color: #C4B5FD !important; }
-        }
-
-        /* Ensure containers stretch full width on small screens */
-        .chart-container, 
-        .table-container, 
-        .shadow-card, 
-        .print-header, 
-        .section {
-          width: 100%;
-          max-width: 100%;
-        }
-      `}
-      </style>
-
-      <div className="space-y-8 p-6 max-w-full">
-        {/* Print Button */}
-        <div className="flex justify-end no-print">
-          <AnimatedButton onClick={handlePrint} className="px-6 py-2 bg-purple-600 text-white rounded-2xl hover:bg-purple-700">
-            Print Report
-          </AnimatedButton>
+      {/* Date range & threshold */}
+      <div className="flex flex-wrap gap-4 items-center no-print">
+        <div className="flex items-center gap-2">
+          <label htmlFor="preset-7" className="text-purple-700 font-medium cursor-pointer">
+            Preset:
+          </label>
+          <button
+            id="preset-7"
+            onClick={() => applyPreset(7)}
+            className="px-3 py-1 bg-purple-200 rounded-2xl hover:bg-purple-300"
+          >
+            Last 7d
+          </button>
+          <button
+            onClick={() => applyPreset(30)}
+            className="px-3 py-1 bg-purple-200 rounded-2xl hover:bg-purple-300"
+          >
+            Last 30d
+          </button>
         </div>
-
-        {/* Header showing report title + date range */}
-        <div className="print-header text-center w-full">
-          <h2>eStore Analytics Report</h2>
-          <div className="underline"></div>
-          <p>
-            {startDate}  —  {endDate}
-          </p>
+        <div className="flex items-center gap-2">
+          <label htmlFor="start-date" className="text-purple-700 font-medium">
+            From
+          </label>
+          <input
+            id="start-date"
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="px-3 py-2 border rounded-2xl focus:ring-2 focus:ring-purple-300"
+          />
         </div>
-
-        {/* Date Filters (hidden in print) */}
-        <div className="flex flex-col sm:flex-row items-center gap-4 no-print w-full">
-          <div className="flex items-center gap-2">
-            <label htmlFor="start-date" className="text-purple-700 font-medium">
-              Start:
-            </label>
-            <input
-              id="start-date"
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="border border-purple-300 rounded-2xl px-3 py-2 bg-purple-50 focus:outline-none focus:ring-2 focus:ring-purple-300"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <label htmlFor="end-date" className="text-purple-700 font-medium">
-              End:
-            </label>
-            <input
-              id="end-date"
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="border border-purple-300 rounded-2xl px-3 py-2 bg-purple-50 focus:outline-none focus:ring-2 focus:ring-purple-300"
-            />
-          </div>
+        <div className="flex items-center gap-2">
+          <label htmlFor="end-date" className="text-purple-700 font-medium">
+            To
+          </label>
+          <input
+            id="end-date"
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="px-3 py-2 border rounded-2xl focus:ring-2 focus:ring-purple-300"
+          />
         </div>
+        <div className="flex items-center gap-2">
+          <label htmlFor="threshold" className="text-purple-700 font-medium">
+            Low‐stock ≤
+          </label>
+          <input
+            id="threshold"
+            type="number"
+            min="0"
+            value={threshold}
+            onChange={(e) => setThreshold(parseInt(e.target.value, 10))}
+            className="w-20 px-3 py-2 border rounded-2xl focus:ring-2 focus:ring-purple-300"
+          />
+        </div>
+      </div>
 
-        {/* Summary Counts */}
-        {counts && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 section w-full">
+      {/* Summary counts */}
+      {counts && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[
+            { label: 'Users', value: counts.users, color: 'purple-600' },
+            { label: 'Products', value: counts.products, color: 'purple-500' },
+            { label: 'Orders', value: counts.orders, color: 'purple-400' },
+            {
+              label: 'Sales in Range',
+              value: totalSalesRange.toLocaleString(),
+              color: 'purple-300',
+            },
+          ].map((c, i) => (
             <motion.div
+              key={c.label}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-purple-50 border-l-4 border-purple-600 rounded-2xl p-6 shadow-card w-full"
+              transition={{ delay: i * 0.1 }}
+              className={`bg-purple-50 border-l-4 border-${c.color} rounded-2xl p-6 shadow-card`}
             >
-              <p className="text-sm text-purple-700">Total Users</p>
-              <p className="mt-1 text-2xl font-bold text-purple-600">{counts.users}</p>
+              <p className="text-sm text-purple-700">{`Total ${c.label}`}</p>
+              <p className={`mt-1 text-2xl font-bold text-${c.color}`}>{c.value}</p>
             </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="bg-purple-50 border-l-4 border-purple-500 rounded-2xl p-6 shadow-card w-full"
-            >
-              <p className="text-sm text-purple-700">Total Products</p>
-              <p className="mt-1 text-2xl font-bold text-purple-500">{counts.products}</p>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="bg-purple-50 border-l-4 border-purple-400 rounded-2xl p-6 shadow-card w-full"
-            >
-              <p className="text-sm text-purple-700">Total Orders</p>
-              <p className="mt-1 text-2xl font-bold text-purple-400">{counts.orders}</p>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="bg-purple-50 border-l-4 border-purple-300 rounded-2xl p-6 shadow-card w-full"
-            >
-              <p className="text-sm text-purple-700">Sales Selected Range</p>
-              <p className="mt-1 text-2xl font-bold text-purple-300">
-                ${totalSalesRange.toLocaleString()}
-              </p>
-            </motion.div>
-          </div>
-        )}
-
-        {/* Tables Grid: Recent Orders & Top Customers */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 section w-full">
-          {/* Recent Orders */}
-          <div className="p-6 bg-purple-50 rounded-2xl shadow-card table-container w-full">
-            <h3 className="text-xl font-semibold mb-4 text-purple-700">📄 Recent Orders</h3>
-            {Array.isArray(recentOrders) && recentOrders.length > 0 ? (
-              <div className="overflow-x-auto w-full">
-                <table className="min-w-full bg-purple-100 rounded-lg">
-                  <thead>
-                    <tr className="bg-purple-200">
-                      <th className="px-4 py-2 text-left text-sm font-medium text-purple-600">
-                        Order ID
-                      </th>
-                      <th className="px-4 py-2 text-left text-sm font-medium text-purple-600">
-                        Customer
-                      </th>
-                      <th className="px-4 py-2 text-left text-sm font-medium text-purple-600">
-                        Date
-                      </th>
-                      <th className="px-4 py-2 text-right text-sm font-medium text-purple-600">
-                        Total
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {recentOrders.map((order, idx) => (
-                      <motion.tr
-                        key={order._id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: idx * 0.05 }}
-                        className="border-b even:bg-white hover:bg-gray-100 transition-colors"
-                      >
-                        <td className="px-4 py-2 text-purple-800">
-                          {order._id.slice(-6)}
-                        </td>
-                        <td className="px-4 py-2 text-purple-700">
-                          {order.user?.name || 'Unknown'}
-                        </td>
-                        <td className="px-4 py-2 text-purple-600">
-                          {new Date(order.createdAt).toLocaleDateString()}
-                        </td>
-                        <td className="px-4 py-2 text-right text-purple-800">
-                          ${order.total?.toFixed(2) || '0.00'}
-                        </td>
-                      </motion.tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p className="text-purple-600">No recent orders.</p>
-            )}
-          </div>
-
-          {/* Top Customers */}
-          <div className="p-6 bg-purple-50 rounded-2xl shadow-card table-container w-full">
-            <h3 className="text-xl font-semibold mb-4 text-purple-700">🏆 Top Customers</h3>
-            {Array.isArray(topCustomers) && topCustomers.length > 0 ? (
-              <div className="overflow-x-auto w-full">
-                <table className="min-w-full bg-purple-100 rounded-lg">
-                  <thead>
-                    <tr className="bg-purple-200">
-                      <th className="px-4 py-2 text-left text-sm font-medium text-purple-600">
-                        Customer
-                      </th>
-                      <th className="px-4 py-2 text-right text-sm font-medium text-purple-600">
-                        Total Spent
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {topCustomers.map((cust, idx) => (
-                      <motion.tr
-                        key={cust._id || idx}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: idx * 0.05 }}
-                        className="border-b even:bg-white hover:bg-gray-100 transition-colors"
-                      >
-                        <td className="px-4 py-2 text-purple-800">{cust.name}</td>
-                        <td className="px-4 py-2 text-right text-purple-800">
-                          ${cust.totalSpent?.toLocaleString() || '0'}
-                        </td>
-                      </motion.tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p className="text-purple-600">No top customers found.</p>
-            )}
-          </div>
+          ))}
         </div>
+      )}
 
-        {/* Inventory Alerts - full width below tables */}
-        <div className="p-6 bg-purple-50 rounded-2xl shadow-card table-container section w-full">
-          <h3 className="text-xl font-semibold mb-4 text-purple-700">🚨 Inventory Alerts</h3>
-          {Array.isArray(lowInventory) && lowInventory.length > 0 ? (
-            <div className="overflow-x-auto w-full">
-              <table className="min-w-full bg-purple-100 rounded-lg">
-                <thead>
-                  <tr className="bg-purple-200">
+      {/* Recent Orders & Top Customers */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Recent Orders */}
+        <section className="bg-white rounded-2xl shadow-card p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-xl font-semibold text-purple-700">📄 Recent Orders</h3>
+            <AnimatedButton
+              size="sm"
+              onClick={() =>
+                exportCSV(
+                  recentOrders.map((o) => ({
+                    id: o._id,
+                    user: o.user.name,
+                    email: o.user.email,
+                    date: new Date(o.createdAt).toISOString(),
+                    total: o.total.toFixed(2),
+                  })),
+                  [
+                    { key: 'id', label: 'Order ID' },
+                    { key: 'user', label: 'Customer' },
+                    { key: 'email', label: 'Email' },
+                    { key: 'date', label: 'Date' },
+                    { key: 'total', label: 'Total' },
+                  ],
+                  `recent-orders_${startDate}_to_${endDate}`
+                )
+              }
+              className="bg-purple-200 text-purple-700 hover:bg-purple-300"
+            >
+              Export CSV
+            </AnimatedButton>
+          </div>
+          {recentOrders.length ? (
+            <div className="overflow-x-auto">
+              <table className="min-w-full">
+                <thead className="bg-purple-100 sticky top-0">
+                  <tr>
                     <th className="px-4 py-2 text-left text-sm font-medium text-purple-600">
-                      Product
+                      #
+                    </th>
+                    <th className="px-4 py-2 text-left text-sm font-medium text-purple-600">
+                      Customer
+                    </th>
+                    <th className="px-4 py-2 text-left text-sm font-medium text-purple-600">
+                      Date
                     </th>
                     <th className="px-4 py-2 text-right text-sm font-medium text-purple-600">
-                      In Stock
+                      Total
                     </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {lowInventory.map((prod, idx) => (
+                  {recentOrders.map((o, i) => (
                     <motion.tr
-                      key={prod._id || idx}
+                      key={o._id}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: idx * 0.05 }}
-                      className="border-b even:bg-white hover:bg-gray-100 transition-colors"
+                      transition={{ delay: i * 0.05 }}
+                      className="border-b even:bg-neutral-50 hover:bg-neutral-100"
                     >
-                      <td className="px-4 py-2 text-purple-800">{prod.name}</td>
-                      <td className="px-4 py-2 text-right text-red-600 font-semibold">
-                        {prod.countInStock}
+                      <td className="px-4 py-2 text-purple-800">{i + 1}</td>
+                      <td className="px-4 py-2 text-purple-700">
+                        {o.user.name} ({o.user.email})
+                      </td>
+                      <td className="px-4 py-2 text-purple-600 whitespace-nowrap">
+                        {new Date(o.createdAt).toLocaleString()}
+                      </td>
+                      <td className="px-4 py-2 text-purple-800 text-right">
+                        {o.total.toFixed(2)}
                       </td>
                     </motion.tr>
                   ))}
@@ -529,101 +373,291 @@ export default function AdminAnalyticsCharts() {
               </table>
             </div>
           ) : (
-            <p className="text-purple-600">No low‐stock products.</p>
+            <p className="text-purple-600">No recent orders.</p>
           )}
+        </section>
+
+        {/* Top Customers */}
+        <section className="bg-white rounded-2xl shadow-card p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-xl font-semibold text-purple-700">🏆 Top Customers</h3>
+            <AnimatedButton
+              size="sm"
+              onClick={() =>
+                exportCSV(
+                  topCustomers.map((c) => ({
+                    name: c.name,
+                    totalSpent: c.totalSpent.toFixed(2),
+                  })),
+                  [
+                    { key: 'name', label: 'Customer' },
+                    { key: 'totalSpent', label: 'Total Spent' },
+                  ],
+                  `top-customers_${startDate}_to_${endDate}`
+                )
+              }
+              className="bg-purple-200 text-purple-700 hover:bg-purple-300"
+            >
+              Export CSV
+            </AnimatedButton>
+          </div>
+          {topCustomers.length ? (
+            <div className="overflow-x-auto">
+              <table className="min-w-full">
+                <thead className="bg-purple-100 sticky top-0">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-sm font-medium text-purple-600">
+                      #
+                    </th>
+                    <th className="px-4 py-2 text-left text-sm font-medium text-purple-600">
+                      Customer
+                    </th>
+                    <th className="px-4 py-2 text-right text-sm font-medium text-purple-600">
+                      Total Spent
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {topCustomers.map((c, i) => (
+                    <motion.tr
+                      key={c._id || i}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.05 }}
+                      className="border-b even:bg-neutral-50 hover:bg-neutral-100"
+                    >
+                      <td className="px-4 py-2 text-purple-800">{i + 1}</td>
+                      <td className="px-4 py-2 text-purple-700">{c.name}</td>
+                      <td className="px-4 py-2 text-purple-800 text-right">
+                        {c.totalSpent.toFixed(2)}
+                      </td>
+                    </motion.tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-purple-600">No top customers.</p>
+          )}
+        </section>
+      </div>
+
+      {/* Inventory Alerts */}
+      <section className="bg-white rounded-2xl shadow-card p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-xl font-semibold text-purple-700">🚨 Low‐Stock Alerts</h3>
+          <AnimatedButton
+            size="sm"
+            onClick={() =>
+              exportCSV(
+                lowInventory.map((p) => ({
+                  name: p.name,
+                  inStock: p.countInStock,
+                })),
+                [
+                  { key: 'name', label: 'Product' },
+                  { key: 'inStock', label: 'In Stock' },
+                ],
+                `low-stock_${threshold}`
+              )
+            }
+            className="bg-purple-200 text-purple-700 hover:bg-purple-300"
+          >
+            Export CSV
+          </AnimatedButton>
         </div>
-
-        {/* Charts Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 section w-full">
-          {/* Sales Over Time */}
-          <div className="p-6 bg-purple-50 rounded-2xl shadow-card chart-container w-full">
-            <h3 className="text-xl font-semibold mb-4 text-purple-700">📈 Sales Over Time</h3>
-            {Array.isArray(salesData) && salesData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={salesData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" tick={{ fill: '#6B21A8' }} />
-                  <YAxis tick={{ fill: '#6B21A8' }} />
-                  <Tooltip />
-                  <Line
-                    type="monotone"
-                    dataKey="totalSales"
-                    stroke={COLORS[0]}
-                    strokeWidth={2}
-                    dot={{ r: 3 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <p className="text-purple-600">Loading sales data…</p>
-            )}
+        {lowInventory.length ? (
+          <div className="overflow-x-auto">
+            <table className="min-w-full">
+              <thead className="bg-purple-100 sticky top-0">
+                <tr>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-purple-600">
+                    Product
+                  </th>
+                  <th className="px-4 py-2 text-right text-sm font-medium text-purple-600">
+                    In Stock
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {lowInventory.map((p, i) => (
+                  <motion.tr
+                    key={p._id || i}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                    className="border-b even:bg-neutral-50 hover:bg-neutral-100"
+                  >
+                    <td className="px-4 py-2 text-purple-700">{p.name}</td>
+                    <td className="px-4 py-2 text-right text-red-600 font-semibold">
+                      {p.countInStock}
+                    </td>
+                  </motion.tr>
+                ))}
+              </tbody>
+            </table>
           </div>
+        ) : (
+          <p className="text-purple-600">No low‐stock products.</p>
+        )}
+      </section>
 
-          {/* Top Products */}
-          <div className="p-6 bg-purple-50 rounded-2xl shadow-card chart-container w-full">
-            <h3 className="text-xl font-semibold mb-4 text-purple-700">
-              🏆 Top 5 Products by Revenue
+      {/* Charts Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Sales Over Time */}
+        <section className="bg-white rounded-2xl shadow-card p-6 chart-container">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-xl font-semibold text-purple-700">📈 Sales Over Time</h3>
+            <AnimatedButton
+              size="sm"
+              onClick={() =>
+                exportCSV(
+                  salesData.map((d) => ({
+                    date: d.date,
+                    totalSales: d.totalSales,
+                  })),
+                  [
+                    { key: 'date', label: 'Date' },
+                    { key: 'totalSales', label: 'Total Sales' },
+                  ],
+                  `sales_${startDate}_to_${endDate}`
+                )
+              }
+              className="bg-purple-200 text-purple-700 hover:bg-purple-300"
+            >
+              Export CSV
+            </AnimatedButton>
+          </div>
+          {salesData.length ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart
+                data={salesData}
+                margin={{ top: 5, right: 30, left: 0, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" tick={{ fill: '#6B21A8' }} />
+                <YAxis tick={{ fill: '#6B21A8' }} />
+                <Tooltip />
+                <Line
+                  type="monotone"
+                  dataKey="totalSales"
+                  stroke={COLORS[0]}
+                  strokeWidth={2}
+                  dot={{ r: 3 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="text-purple-600">No sales data.</p>
+          )}
+        </section>
+
+        {/* Top Products */}
+        <section className="bg-white rounded-2xl shadow-card p-6 chart-container">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-xl font-semibold text-purple-700">
+              🏆 Top 5 Products
             </h3>
-            {Array.isArray(topProducts) && topProducts.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart
-                  data={topProducts.map((p) => ({
+            <AnimatedButton
+              size="sm"
+              onClick={() =>
+                exportCSV(
+                  topProducts.map((p) => ({
                     name: p.name,
-                    revenue: p.totalRevenue,
-                  }))}
-                  margin={{ top: 5, right: 30, left: 20, bottom: 80 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis
-                    dataKey="name"
-                    angle={-45}
-                    textAnchor="end"
-                    interval={0}
-                    height={60}
-                    tick={{ fill: '#6B21A8' }}
-                  />
-                  <YAxis tick={{ fill: '#6B21A8' }} />
-                  <Tooltip />
-                  <Bar dataKey="revenue" fill={COLORS[1]} />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <p className="text-purple-600">Loading top products…</p>
-            )}
+                    totalRevenue: p.totalRevenue.toFixed(2),
+                  })),
+                  [
+                    { key: 'name', label: 'Product' },
+                    { key: 'totalRevenue', label: 'Revenue' },
+                  ],
+                  `top-products_${startDate}_to_${endDate}`
+                )
+              }
+              className="bg-purple-200 text-purple-700 hover:bg-purple-300"
+            >
+              Export CSV
+            </AnimatedButton>
           </div>
+          {topProducts.length ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart
+                data={topProducts.map((p) => ({
+                  name: p.name,
+                  revenue: p.totalRevenue,
+                }))}
+                margin={{ top: 5, right: 30, left: 0, bottom: 80 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="name"
+                  angle={-45}
+                  textAnchor="end"
+                  interval={0}
+                  height={60}
+                  tick={{ fill: '#6B21A8' }}
+                />
+                <YAxis tick={{ fill: '#6B21A8' }} />
+                <Tooltip />
+                <Bar dataKey="revenue" fill={COLORS[1]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="text-purple-600">No top products.</p>
+          )}
+        </section>
 
-          {/* Category Sales (span two columns on small screens) */}
-          <div className="lg:col-span-2 p-6 bg-purple-50 rounded-2xl shadow-card chart-container w-full">
-            <h3 className="text-xl font-semibold mb-4 text-purple-700">
+        {/* Category Sales */}
+        <section className="lg:col-span-2 bg-white rounded-2xl shadow-card p-6 chart-container">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-xl font-semibold text-purple-700">
               📊 Revenue by Category
             </h3>
-            {Array.isArray(categorySales) && categorySales.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={categorySales}
-                    dataKey="totalRevenue"
-                    nameKey="_id"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={100}
-                    fill={COLORS[2]}
-                    label={(entry) => entry._id}
-                  >
-                    {categorySales.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <p className="text-purple-600">Loading category sales…</p>
-            )}
+            <AnimatedButton
+              size="sm"
+              onClick={() =>
+                exportCSV(
+                  categorySales.map((c) => ({
+                    category: c._id,
+                    totalRevenue: c.totalRevenue.toFixed(2),
+                  })),
+                  [
+                    { key: 'category', label: 'Category' },
+                    { key: 'totalRevenue', label: 'Revenue' },
+                  ],
+                  `category-sales`
+                )
+              }
+              className="bg-purple-200 text-purple-700 hover:bg-purple-300"
+            >
+              Export CSV
+            </AnimatedButton>
           </div>
-        </div>
+          {categorySales.length ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={categorySales}
+                  dataKey="totalRevenue"
+                  nameKey="_id"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={100}
+                  fill={COLORS[2]}
+                  label={(entry) => entry._id}
+                >
+                  {categorySales.map((_, idx) => (
+                    <Cell key={idx} fill={COLORS[idx % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="text-purple-600">No category data.</p>
+          )}
+        </section>
       </div>
-    </>
-  );
+    </div>
+  )
 }
