@@ -152,7 +152,7 @@ export default function ProductDetails() {
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="max-w-4xl mx-auto p-8 bg-white rounded-2xl shadow-card space-y-8"
+        className="max-w-4xl mx-auto mt-24 p-8 bg-white rounded-2xl shadow-card space-y-8"
       >
         {/* PRODUCT SUMMARY */}
         <div className="flex flex-col md:flex-row gap-8">
