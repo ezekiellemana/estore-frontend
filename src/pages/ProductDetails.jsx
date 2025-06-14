@@ -38,7 +38,6 @@ export default function ProductDetails() {
   useEffect(() => {
     if (didFetchProduct.current) return;
     didFetchProduct.current = true;
-
     (async () => {
       try {
         const { data } = await api.get(`/api/products/${id}`);
@@ -62,7 +61,6 @@ export default function ProductDetails() {
   useEffect(() => {
     if (didFetchReviews.current) return;
     didFetchReviews.current = true;
-
     (async () => {
       try {
         const { data } = await api.get(`/api/reviews/${id}`);
@@ -142,7 +140,7 @@ export default function ProductDetails() {
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="max-w-4xl mx-auto mt-24 p-6 md:p-8 bg-white rounded-2xl shadow-card"
+        className="max-w-4xl mx-auto mt-24 px-4 py-6 md:px-8 md:py-8 bg-white rounded-2xl shadow-card"
       >
         {/* PRODUCT SUMMARY */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -182,33 +180,33 @@ export default function ProductDetails() {
           {/* DETAILS */}
           <div className="flex flex-col justify-between">
             <div>
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-3xl font-bold">{product.name}</h2>
-                <Link to="/products" className="text-accent-500 text-sm hover:underline">
+              <div className="flex justify-between items-start mb-4">
+                <h2 className="text-3xl font-bold break-words">{product.name}</h2>
+                <Link to="/products" className="text-accent-500 text-sm hover:underline whitespace-nowrap">
                   ← Back
                 </Link>
               </div>
 
               {/* PRICE */}
-              <div className="mb-4">
+              <div className="mb-4 flex flex-wrap items-baseline gap-3">
                 {hasDiscount ? (
-                  <div className="flex items-baseline gap-3">
-                    <span className="line-through text-neutral-400 text-lg">
+                  <>
+                    <span className="line-through text-neutral-400 text-lg break-words">
                       {formatPrice(product.price)}
                     </span>
-                    <span className="text-2xl md:text-3xl font-semibold text-accent-600">
+                    <span className="text-2xl md:text-3xl font-semibold text-accent-600 break-words">
                       {formatPrice(discountedPrice)}
                     </span>
-                  </div>
+                  </>
                 ) : (
-                  <span className="text-2xl md:text-3xl font-semibold text-accent-600">
+                  <span className="text-2xl md:text-3xl font-semibold text-accent-600 break-words">
                     {formatPrice(product.price)}
                   </span>
                 )}
               </div>
 
               {/* META */}
-              <p className="text-sm text-neutral-500 mb-2">
+              <p className="text-sm text-neutral-500 mb-2 break-words">
                 Category: <span className="font-medium">{product.category?.name || 'Uncategorized'}</span>
               </p>
               <div className="flex items-center gap-2 mb-4">
@@ -220,7 +218,7 @@ export default function ProductDetails() {
               {/* DESCRIPTION */}
               <div>
                 <h4 className="text-lg font-semibold mb-2">Description</h4>
-                <p className="text-neutral-600 leading-relaxed">{product.description}</p>
+                <p className="text-neutral-600 leading-relaxed break-words">{product.description}</p>
               </div>
             </div>
 
@@ -228,7 +226,7 @@ export default function ProductDetails() {
             <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:gap-4">
               {product.stock > 0 ? (
                 <>
-                  <span className="text-green-600 font-medium mb-2 sm:mb-0">
+                  <span className="text-green-600 font-medium mb-2 sm:mb-0 whitespace-nowrap">
                     In Stock ({product.stock})
                   </span>
                   <button
@@ -239,7 +237,7 @@ export default function ProductDetails() {
                   </button>
                 </>
               ) : (
-                <span className="text-red-600 font-medium">Out of Stock</span>
+                <span className="text-red-600 font-medium break-words">Out of Stock</span>
               )}
             </div>
           </div>
@@ -258,8 +256,8 @@ export default function ProductDetails() {
               <ul className="space-y-6">
                 {displayedReviews.map((rev) => (
                   <li key={rev._id} className="border-b pb-4">
-                    <div className="flex items-center gap-3 mb-1">
-                      <span className="font-medium">{rev.user?.name || 'Anonymous'}</span>
+                    <div className="flex flex-wrap items-center gap-3 mb-1">
+                      <span className="font-medium break-words">{rev.user?.name || 'Anonymous'}</span>
                       <div className="flex">
                         {[...Array(5)].map((_, i) => (
                           <FaStar
@@ -268,10 +266,10 @@ export default function ProductDetails() {
                           />
                         ))}
                       </div>
-                      <span className="text-sm text-neutral-400 ml-2">{rev.rating}/5</span>
+                      <span className="text-sm text-neutral-400 ml-2 whitespace-nowrap">{rev.rating}/5</span>
                     </div>
-                    <p className="text-neutral-700">{rev.comment}</p>
-                    <p className="text-xs text-neutral-400 mt-1">
+                    <p className="text-neutral-700 break-words">{rev.comment}</p>
+                    <p className="text-xs text-neutral-400 mt-1 whitespace-nowrap">
                       {new Date(rev.createdAt).toLocaleDateString()}
                     </p>
                   </li>
@@ -279,7 +277,7 @@ export default function ProductDetails() {
               </ul>
 
               {totalPages > 1 && (
-                <div className="flex justify-center items-center gap-4">
+                <div className="flex flex-wrap justify-center items-center gap-4">
                   <button
                     onClick={() => goToPage(currentPage - 1)}
                     disabled={currentPage === 1}
@@ -319,7 +317,7 @@ export default function ProductDetails() {
               onChange={(e) => setNewComment(e.target.value)}
               placeholder="Write your thoughts…"
               rows={3}
-              className="w-full border rounded-2xl p-3 bg-neutral-50"
+              className="w-full border rounded-2xl p-3 bg-neutral-50 break-words"
               required
             />
             <button
@@ -347,13 +345,11 @@ export default function ProductDetails() {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-2xl p-6 text-center shadow-lg w-80"
+              className="bg-white rounded-2xl p-6 text-center shadow-lg w-80 break-words"
             >
               <h3 className="text-xl font-bold mb-2">Please Log In</h3>
-              <p className="text-neutral-600 mb-4">
-                You need to be logged in to add items to your cart.
-              </p>
-              <div className="flex justify-center gap-4">
+              <p className="text-neutral-600 mb-4">You need to be logged in to add items to your cart.</p>
+              <div className="flex justify-center gap-4 flex-wrap">
                 <Link to="/login">
                   <button className="bg-primary-600 text-white px-4 py-2 rounded-2xl hover:bg-primary-700 text-sm">
                     Log In
