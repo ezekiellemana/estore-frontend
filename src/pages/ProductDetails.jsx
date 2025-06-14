@@ -43,9 +43,7 @@ export default function ProductDetails() {
       try {
         const { data } = await api.get(`/api/products/${id}`);
         setProduct(data);
-        if (Array.isArray(data.images) && data.images.length) {
-          setSelectedImageIndex(0);
-        }
+        if (data.images?.length) setSelectedImageIndex(0);
       } catch (err) {
         console.error(err);
         if (err.response?.status === 404) {
@@ -92,21 +90,17 @@ export default function ProductDetails() {
     ? Math.round(product.price * (1 - product.discount / 100) * 100) / 100
     : product.price;
 
-  // Reviews pagination logic
+  // Reviews pagination
   const totalPages = Math.ceil(reviews.length / REVIEWS_PER_PAGE);
   const displayedReviews = reviews.slice(
     (currentPage - 1) * REVIEWS_PER_PAGE,
     currentPage * REVIEWS_PER_PAGE
   );
-  const goToPage = (page) => {
-    if (page >= 1 && page <= totalPages) setCurrentPage(page);
-  };
+  const goToPage = (page) => page >= 1 && page <= totalPages && setCurrentPage(page);
 
-  // Add to cart
   const handleAddToCart = async () => {
     if (!user) return setShowAuthModal(true);
     if (product.stock < 1) return toast.error('Out of stock.');
-
     try {
       await api.post('/api/cart', { productId: product._id, quantity: 1 });
       toast.success('Added to cart.');
@@ -117,11 +111,10 @@ export default function ProductDetails() {
     }
   };
 
-  // Submit review
   const submitReview = async (e) => {
     e.preventDefault();
     if (newRating < 1 || !newComment.trim()) {
-      return toast.error('Please provide both rating and comment.');
+      return toast.error('Provide both rating and comment.');
     }
     setSubmittingReview(true);
     try {
@@ -136,12 +129,9 @@ export default function ProductDetails() {
       setReviews(data);
       setCurrentPage(1);
     } catch (err) {
-      console.error('Failed to submit review:', err);
-      if (err.response?.status === 401) {
-        setShowAuthModal(true);
-      } else {
-        toast.error(err.response?.data?.error || 'Failed to submit review.');
-      }
+      console.error(err);
+      if (err.response?.status === 401) setShowAuthModal(true);
+      else toast.error(err.response?.data?.error || 'Failed to submit review.');
     } finally {
       setSubmittingReview(false);
     }
@@ -152,37 +142,32 @@ export default function ProductDetails() {
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="max-w-4xl mx-auto mt-24 p-8 bg-white rounded-2xl shadow-card space-y-8"
+        className="max-w-4xl mx-auto mt-24 p-6 md:p-8 bg-white rounded-2xl shadow-card"
       >
         {/* PRODUCT SUMMARY */}
-        <div className="flex flex-col md:flex-row gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* IMAGE GALLERY */}
-          <div className="flex-1">
+          <div>
             {product.images?.length ? (
               <>
                 <img
-                  loading="lazy"
                   src={product.images[selectedImageIndex]}
-                  alt={`${product.name} (${selectedImageIndex + 1})`}
+                  alt={`${product.name} image ${selectedImageIndex + 1}`}
                   className="w-full h-80 object-cover rounded-2xl border"
+                  loading="lazy"
                 />
                 <div className="mt-4 flex space-x-2 overflow-x-auto">
                   {product.images.map((img, idx) => (
                     <button
                       key={idx}
                       onClick={() => setSelectedImageIndex(idx)}
-                      className={`w-16 h-16 rounded-md overflow-hidden border-2 ${
+                      className={`w-16 h-16 rounded-lg overflow-hidden border-2 ${
                         idx === selectedImageIndex
                           ? 'border-accent-500'
                           : 'border-transparent hover:border-neutral-300'
                       }`}
                     >
-                      <img
-                        loading="lazy"
-                        src={img}
-                        alt={`Thumb ${idx + 1}`}
-                        className="object-cover w-full h-full"
-                      />
+                      <img src={img} alt={`Thumb ${idx + 1}`} className="w-full h-full object-cover" />
                     </button>
                   ))}
                 </div>
@@ -194,74 +179,74 @@ export default function ProductDetails() {
             )}
           </div>
 
-          {/* PRODUCT DETAILS */}
-          <div className="flex-1 space-y-4">
-            <div className="flex justify-between items-start">
-              <h2 className="text-3xl font-bold">{product.name}</h2>
-              <Link to="/products" className="text-accent-500 text-sm hover:underline">
-                ← Back
-              </Link>
-            </div>
+          {/* DETAILS */}
+          <div className="flex flex-col justify-between">
+            <div>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-3xl font-bold">{product.name}</h2>
+                <Link to="/products" className="text-accent-500 text-sm hover:underline">
+                  ← Back
+                </Link>
+              </div>
 
-            {/* PRICE */}
-            <div className="text-xl">
-              {hasDiscount ? (
-                <div className="flex gap-2 items-baseline">
-                  <span className="line-through text-neutral-500">
+              {/* PRICE */}
+              <div className="mb-4">
+                {hasDiscount ? (
+                  <div className="flex items-baseline gap-3">
+                    <span className="line-through text-neutral-400 text-lg">
+                      {formatPrice(product.price)}
+                    </span>
+                    <span className="text-2xl md:text-3xl font-semibold text-accent-600">
+                      {formatPrice(discountedPrice)}
+                    </span>
+                  </div>
+                ) : (
+                  <span className="text-2xl md:text-3xl font-semibold text-accent-600">
                     {formatPrice(product.price)}
                   </span>
-                  <span className="font-semibold text-accent-600">
-                    {formatPrice(discountedPrice)}
-                  </span>
-                </div>
-              ) : (
-                <span className="font-semibold text-accent-600">
-                  {formatPrice(product.price)}
-                </span>
-              )}
-            </div>
+                )}
+              </div>
 
-            {/* META */}
-            <p className="text-sm text-neutral-500">
-              Category: {product.category?.name || 'Uncategorized'}
-            </p>
-            <div className="flex items-center text-sm text-yellow-600 gap-1">
-              <FaStar />
-              <span>{product.avgRating.toFixed(1)}</span>
-              <span className="text-neutral-500">({product.totalReviews})</span>
-            </div>
-
-            {/* DESCRIPTION */}
-            <div className="mt-4">
-              <h4 className="text-lg font-semibold mb-2">Description</h4>
-              <p className="text-neutral-600 text-justify leading-relaxed">
-                {product.description}
+              {/* META */}
+              <p className="text-sm text-neutral-500 mb-2">
+                Category: <span className="font-medium">{product.category?.name || 'Uncategorized'}</span>
               </p>
+              <div className="flex items-center gap-2 mb-4">
+                <FaStar className="text-yellow-500" />
+                <span className="font-medium">{product.avgRating.toFixed(1)}</span>
+                <span className="text-neutral-400">({product.totalReviews})</span>
+              </div>
+
+              {/* DESCRIPTION */}
+              <div>
+                <h4 className="text-lg font-semibold mb-2">Description</h4>
+                <p className="text-neutral-600 leading-relaxed">{product.description}</p>
+              </div>
             </div>
 
             {/* ACTIONS */}
-            <div className="flex items-center gap-4 pt-4">
+            <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:gap-4">
               {product.stock > 0 ? (
                 <>
-                  <span className="text-green-600 text-sm">
+                  <span className="text-green-600 font-medium mb-2 sm:mb-0">
                     In Stock ({product.stock})
                   </span>
                   <button
                     onClick={handleAddToCart}
-                    className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-2 rounded-2xl"
+                    className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-2 rounded-2xl transition"
                   >
                     Add to Cart
                   </button>
                 </>
               ) : (
-                <span className="text-red-600 text-sm">Out of Stock</span>
+                <span className="text-red-600 font-medium">Out of Stock</span>
               )}
             </div>
           </div>
         </div>
 
-        {/* REVIEW SECTION */}
-        <div className="space-y-4">
+        {/* REVIEWS */}
+        <div className="mt-12 space-y-6">
           <h3 className="text-2xl font-semibold">Customer Reviews</h3>
 
           {loadingReviews ? (
@@ -270,26 +255,22 @@ export default function ProductDetails() {
             <p className="text-neutral-500">No reviews yet. Be the first!</p>
           ) : (
             <>
-              <ul className="space-y-4">
+              <ul className="space-y-6">
                 {displayedReviews.map((rev) => (
                   <li key={rev._id} className="border-b pb-4">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">
-                        {rev.user?.name || 'Anonymous'}
-                      </span>
-                      <div className="flex items-center text-yellow-500">
+                    <div className="flex items-center gap-3 mb-1">
+                      <span className="font-medium">{rev.user?.name || 'Anonymous'}</span>
+                      <div className="flex">
                         {[...Array(5)].map((_, i) => (
                           <FaStar
                             key={i}
-                            className={i < rev.rating ? '' : 'text-neutral-300'}
+                            className={i < rev.rating ? 'text-yellow-500' : 'text-neutral-300'}
                           />
                         ))}
                       </div>
-                      <span className="text-sm text-neutral-500 ml-2">
-                        {rev.rating}/5
-                      </span>
+                      <span className="text-sm text-neutral-400 ml-2">{rev.rating}/5</span>
                     </div>
-                    <p className="mt-1">{rev.comment}</p>
+                    <p className="text-neutral-700">{rev.comment}</p>
                     <p className="text-xs text-neutral-400 mt-1">
                       {new Date(rev.createdAt).toLocaleDateString()}
                     </p>
@@ -298,11 +279,11 @@ export default function ProductDetails() {
               </ul>
 
               {totalPages > 1 && (
-                <div className="flex justify-center items-center gap-3">
+                <div className="flex justify-center items-center gap-4">
                   <button
-                    disabled={currentPage === 1}
                     onClick={() => goToPage(currentPage - 1)}
-                    className="px-3 py-1 bg-neutral-200 rounded-2xl disabled:opacity-50"
+                    disabled={currentPage === 1}
+                    className="px-4 py-2 bg-neutral-200 rounded-2xl disabled:opacity-50"
                   >
                     Previous
                   </button>
@@ -310,9 +291,9 @@ export default function ProductDetails() {
                     Page {currentPage} of {totalPages}
                   </span>
                   <button
-                    disabled={currentPage === totalPages}
                     onClick={() => goToPage(currentPage + 1)}
-                    className="px-3 py-1 bg-neutral-200 rounded-2xl disabled:opacity-50"
+                    disabled={currentPage === totalPages}
+                    className="px-4 py-2 bg-neutral-200 rounded-2xl disabled:opacity-50"
                   >
                     Next
                   </button>
@@ -321,7 +302,7 @@ export default function ProductDetails() {
             </>
           )}
 
-          {/* SUBMIT REVIEW FORM */}
+          {/* REVIEW FORM */}
           <form onSubmit={submitReview} className="pt-6 border-t space-y-4">
             <h4 className="text-xl font-semibold">Leave a Review</h4>
             <div className="flex gap-2">
@@ -329,9 +310,7 @@ export default function ProductDetails() {
                 <FaStar
                   key={star}
                   onClick={() => setNewRating(star)}
-                  className={`cursor-pointer ${
-                    star <= newRating ? 'text-yellow-500' : 'text-neutral-300'
-                  }`}
+                  className={`cursor-pointer ${star <= newRating ? 'text-yellow-500' : 'text-neutral-300'}`}
                 />
               ))}
             </div>
@@ -339,14 +318,14 @@ export default function ProductDetails() {
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
               placeholder="Write your thoughts…"
-              className="w-full border rounded-2xl p-3 bg-neutral-50"
               rows={3}
+              className="w-full border rounded-2xl p-3 bg-neutral-50"
               required
             />
             <button
               type="submit"
               disabled={submittingReview}
-              className="px-6 py-2 bg-accent-600 text-white rounded-2xl hover:bg-accent-700"
+              className="px-6 py-2 bg-accent-600 text-white rounded-2xl hover:bg-accent-700 transition"
             >
               {submittingReview ? 'Submitting…' : 'Submit Review'}
             </button>
