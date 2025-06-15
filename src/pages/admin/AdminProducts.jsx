@@ -98,7 +98,7 @@ export default function AdminProducts() {
 
   // Edit form handlers
   const startEdit = (prod) => {
-    setEditingProduct(prod._1d);
+    setEditingProduct(prod._id);
     setFormData({
       name: prod.name || '',
       description: prod.description || '',
