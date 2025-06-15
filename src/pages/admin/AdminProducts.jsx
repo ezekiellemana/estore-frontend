@@ -11,7 +11,7 @@ const CLOUDINARY_UPLOAD_URL = 'https://api.cloudinary.com/v1_1/dhubit7vj/upload'
 const UPLOAD_PRESET = 'estore';
 
 // Format numbers like "Tsh.2,250,000.00/="
-const formatPrice = (price) =>
+const formatPrice = price =>
   `Tsh.${price.toLocaleString('en-TZ', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -100,7 +100,7 @@ export default function AdminProducts() {
     setFormData({
       name: prod.name || '',
       description: prod.description
-        ? prod.description.split('\n• ').slice(1)
+        ? prod.description.split('\n• ')
         : [''],
       price: prod.price
         ? prod.price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')
@@ -580,7 +580,7 @@ export default function AdminProducts() {
             <div className="flex space-x-2">
               <button
                 disabled={currentPage === 1}
-                onClick={() => setCurrentPage(p => p - 1)} 
+                onClick={() => setCurrentPage(p => p - 1)}
                 className="rounded-2xl bg-neutral-200 px-3 py-1 disabled:opacity-50"
               >
                 Previous
