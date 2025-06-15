@@ -149,6 +149,11 @@ export default function ProductDetails() {
     }
   };
 
+  // Parse description into bullets if it contains “\n• ”
+  const descriptionBullets = product.description
+    ? product.description.split('\n• ').filter((line) => line.trim())
+    : [];
+
   return (
     <>
       <motion.div
@@ -202,7 +207,10 @@ export default function ProductDetails() {
             <div>
               <div className="flex justify-between items-start mb-4">
                 <h2 className="text-3xl font-bold break-words">{product.name}</h2>
-                <Link to="/products" className="text-accent-500 text-sm hover:underline whitespace-nowrap">
+                <Link
+                  to="/products"
+                  className="text-accent-500 text-sm hover:underline whitespace-nowrap"
+                >
                   ← Back
                 </Link>
               </div>
@@ -227,7 +235,8 @@ export default function ProductDetails() {
 
               {/* META */}
               <p className="text-sm text-neutral-500 mb-2 break-words">
-                Category: <span className="font-medium">{product.category?.name || 'Uncategorized'}</span>
+                Category:{' '}
+                <span className="font-medium">{product.category?.name || 'Uncategorized'}</span>
               </p>
               <div className="flex items-center gap-2 mb-4">
                 <FaStar className="text-yellow-500" />
@@ -238,7 +247,17 @@ export default function ProductDetails() {
               {/* DESCRIPTION */}
               <div>
                 <h4 className="text-lg font-semibold mb-2">Description</h4>
-                <p className="text-neutral-600 leading-relaxed break-words">{product.description}</p>
+                {descriptionBullets.length > 1 ? (
+                  <ul className="list-disc list-inside text-neutral-600 leading-relaxed">
+                    {descriptionBullets.map((bullet, i) => (
+                      <li key={i} className="break-words">{bullet}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-neutral-600 leading-relaxed break-words">
+                    {product.description}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -286,7 +305,9 @@ export default function ProductDetails() {
                           />
                         ))}
                       </div>
-                      <span className="text-sm text-neutral-400 ml-2 whitespace-nowrap">{rev.rating}/5</span>
+                      <span className="text-sm text-neutral-400 ml-2 whitespace-nowrap">
+                        {rev.rating}/5
+                      </span>
                     </div>
                     <p className="text-neutral-700 break-words">{rev.comment}</p>
                     <p className="text-xs text-neutral-400 mt-1 whitespace-nowrap">
@@ -368,7 +389,9 @@ export default function ProductDetails() {
               className="bg-white rounded-2xl p-6 text-center shadow-lg w-80 break-words"
             >
               <h3 className="text-xl font-bold mb-2">Please Log In</h3>
-              <p className="text-neutral-600 mb-4">You need to be logged in to add items or reviews.</p>
+              <p className="text-neutral-600 mb-4">
+                You need to be logged in to add items or reviews.
+              </p>
               <div className="flex justify-center gap-4 flex-wrap">
                 <Link to="/login">
                   <button className="bg-primary-600 text-white px-4 py-2 rounded-2xl hover:bg-primary-700 text-sm">
