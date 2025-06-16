@@ -1,4 +1,3 @@
-// src/pages/Login.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../services/api';
@@ -10,13 +9,13 @@ import { Eye, EyeOff } from 'lucide-react';
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { GoogleLogin } from '@react-oauth/google';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState({});
   const setUser = useAuthStore((s) => s.setUser);
   const navigate = useNavigate();
 
@@ -28,21 +27,40 @@ export default function Login() {
   }, []);
 
   const validate = () => {
-    const errs = {};
-    if (!/\S+@\S+\.\S+/.test(email)) errs.email = 'Invalid email address';
-    if (password.length < 6) errs.password = 'Password must be ≥6 chars';
-    return errs;
+    if (!/\S+@\S+\.\S+/.test(email)) {
+      toast.error('Invalid email address');
+      return false;
+    }
+    if (password.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return false;
+    }
+    return true;
+  };
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setLoading(true);
+    try {
+      // send Google token to backend
+      const { data: userData } = await api.post('/api/users/google-login', {
+        token: credentialResponse.credential,
+      });
+      setUser(userData);
+      toast.success(userData.isAdmin ? `Welcome Admin, ${userData.name}!` : `Welcome back, ${userData.name}!`);
+      navigate(userData.isAdmin ? '/admin' : '/profile', { replace: true });
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.error || 'Google login failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const submit = async (e) => {
     e.preventDefault();
-    const val = validate();
-    if (Object.keys(val).length) {
-      setErrors(val);
-      return;
-    }
+    if (!validate()) return;
+
     setLoading(true);
-    setErrors({});
     try {
       await api.post('/api/users/login', { email, password });
       const { data: userData } = await api.get('/api/users/profile');
@@ -52,9 +70,7 @@ export default function Login() {
     } catch (err) {
       console.error(err);
       setPassword('');
-      const msg = err.response?.data?.error || 'Login failed';
-      setErrors({ submit: msg });
-      toast.error(msg);
+      toast.error(err.response?.data?.error || 'Login failed');
     } finally {
       setLoading(false);
     }
@@ -62,28 +78,69 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-primary-50 px-4">
-      <motion.div className="w-full max-w-md" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.4 }} whileHover={{ scale: 1.02 }}>
+      <motion.div
+        className="w-full max-w-md"
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.4 }}
+        whileHover={{ scale: 1.02 }}
+      >
         <Card className="p-6 bg-white dark:bg-neutral-800 rounded-xl shadow-card">
           <CardHeader>
-            <h2 className="text-3xl font-bold text-center text-neutral-800 dark:text-neutral-100 mb-4">Log In</h2>
+            <h2 className="text-3xl font-bold text-center text-neutral-800 dark:text-neutral-100 mb-4">
+              Log In
+            </h2>
           </CardHeader>
-          <CardContent className="space-y-6">
-            {errors.submit && <p className="text-red-500">{errors.submit}</p>}
+          <CardContent className="space-y-4">
+            {/* Google Login */}
+            <div className="flex justify-center">
+              <GoogleLogin onSuccess={handleGoogleSuccess} onError={() => toast.error('Google login failed')} />
+            </div>
+            <p className="text-center text-sm text-neutral-500">or continue with email</p>
+
+            {/* Email / Password */}
             <div>
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" className="mt-1" />
-              {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                className="mt-1"
+              />
             </div>
             <div className="relative">
               <Label htmlFor="password">Password</Label>
-              <Input id="password" type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Your password" className="mt-1 pr-10" />
-              <button type="button" onClick={() => setShowPassword((p) => !p)} className="absolute top-9 right-3 text-neutral-500 hover:text-neutral-700">
+              <Input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Your password"
+                className="mt-1 pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((p) => !p)}
+                className="absolute top-9 right-3 text-neutral-500 hover:text-neutral-700"
+              >
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
-              {errors.password && <p className="text-red-500 text-sm">{errors.password}</p>}
             </div>
-            <Link to="/forgot-password" className="block text-right text-sm text-accent-500 hover:underline">Forgot password?</Link>
-            <AnimatedButton type="submit" className="w-full py-3" onClick={submit} disabled={loading}>
+            <Link
+              to="/forgot-password"
+              className="block text-right text-sm text-accent-500 hover:underline"
+            >
+              Forgot password?
+            </Link>
+
+            <AnimatedButton
+              type="submit"
+              className="w-full py-3 mt-2"
+              onClick={submit}
+              disabled={loading}
+            >
               {loading ? 'Logging in…' : 'Log In'}
             </AnimatedButton>
           </CardContent>
