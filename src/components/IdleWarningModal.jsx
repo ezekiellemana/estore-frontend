@@ -1,4 +1,3 @@
-// src/components/IdleWarningModal.jsx
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
   Dialog,
@@ -17,12 +16,19 @@ export default function IdleWarningModal({
   onForceLogout,
   warningDurationSec = 60,
 }) {
+  // Only show for authenticated users
+  const user = useAuthStore((s) => s.user);
+  if (!user) return null;
+
   const [secondsLeft, setSecondsLeft] = useState(warningDurationSec);
   const intervalRef = useRef(null);
 
   // pull skip flag from persistent auth store
   const skip = useAuthStore((s) => s.skipIdleWarning);
   const setSkip = useAuthStore((s) => s.setSkipIdleWarning);
+
+  // If skip is enabled, don't render
+  if (skip) return null;
 
   // reset countdown each time it opens
   useEffect(() => {
@@ -51,8 +57,6 @@ export default function IdleWarningModal({
     onStayLoggedIn();
   }, [onStayLoggedIn]);
 
-  if (!isOpen || skip) return null;
-
   // compute progress bar width
   const progressPct = (secondsLeft / warningDurationSec) * 100;
 
@@ -60,7 +64,7 @@ export default function IdleWarningModal({
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleStay()}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle className="text-lg">Session Expiring Soon</DialogTitle>
+          <DialogTitle className="text-lg">Heads up! You’re about to be logged out</DialogTitle>
           <DialogDescription className="mt-2">
             You’ll be logged out in{' '}
             <strong className="font-mono">{secondsLeft}s</strong>
