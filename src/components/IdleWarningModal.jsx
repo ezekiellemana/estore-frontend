@@ -11,67 +11,83 @@ import { Button } from '@/components/ui/button';
 import useAuthStore from '../store/useAuthStore';
 
 export default function IdleWarningModal({
-  isOpen,
   onStayLoggedIn,
   onForceLogout,
   warningDurationSec = 60,
+  idleThresholdSec = 180, // 3 minutes
 }) {
   // Only show for authenticated users
   const user = useAuthStore((s) => s.user);
   if (!user) return null;
 
+  const [warningOpen, setWarningOpen] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(warningDurationSec);
-  const intervalRef = useRef(null);
+  const countdownRef = useRef(null);
+  const idleTimerRef = useRef(null);
 
-  // pull skip flag from persistent auth store
   const skip = useAuthStore((s) => s.skipIdleWarning);
   const setSkip = useAuthStore((s) => s.setSkipIdleWarning);
 
-  // If skip is enabled, don't render
-  if (skip) return null;
+  const resetIdleTimer = useCallback(() => {
+    clearTimeout(idleTimerRef.current);
+    if (warningOpen) return;
+    idleTimerRef.current = setTimeout(() => {
+      setWarningOpen(true);
+    }, idleThresholdSec * 1000);
+  }, [idleThresholdSec, warningOpen]);
 
-  // reset countdown each time it opens
+  // Activity listeners
   useEffect(() => {
-    if (!isOpen) return;
+    if (!user || skip) return;
+    const events = ['mousemove', 'keydown', 'click', 'touchstart'];
+    events.forEach((e) => window.addEventListener(e, resetIdleTimer));
+    resetIdleTimer();
+    return () => {
+      clearTimeout(idleTimerRef.current);
+      events.forEach((e) => window.removeEventListener(e, resetIdleTimer));
+    };
+  }, [user, skip, resetIdleTimer]);
 
+  // Countdown when warning opens
+  useEffect(() => {
+    if (!warningOpen) return;
     setSecondsLeft(warningDurationSec);
-    clearInterval(intervalRef.current);
-
-    intervalRef.current = setInterval(() => {
+    clearInterval(countdownRef.current);
+    countdownRef.current = setInterval(() => {
       setSecondsLeft((prev) => {
         if (prev <= 1) {
-          clearInterval(intervalRef.current);
+          clearInterval(countdownRef.current);
           onForceLogout();
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
+    return () => clearInterval(countdownRef.current);
+  }, [warningOpen, warningDurationSec, onForceLogout]);
 
-    return () => clearInterval(intervalRef.current);
-  }, [isOpen, warningDurationSec, onForceLogout]);
-
-  // handler for “Stay Logged In”
   const handleStay = useCallback(() => {
-    clearInterval(intervalRef.current);
+    clearInterval(countdownRef.current);
+    setWarningOpen(false);
+    resetIdleTimer();
     onStayLoggedIn();
-  }, [onStayLoggedIn]);
+  }, [onStayLoggedIn, resetIdleTimer]);
 
-  // compute progress bar width
+  if (skip) return null;
+
   const progressPct = (secondsLeft / warningDurationSec) * 100;
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && handleStay()}>
+    <Dialog open={warningOpen} onOpenChange={(open) => !open && handleStay()}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle className="text-lg">Heads up! You’re about to be logged out</DialogTitle>
           <DialogDescription className="mt-2">
-            You’ll be logged out in{' '}
+            You’ve been idle for a bit. You’ll be logged out in{' '}
             <strong className="font-mono">{secondsLeft}s</strong>
           </DialogDescription>
         </DialogHeader>
 
-        {/* visual countdown bar */}
         <div className="w-full h-2 bg-neutral-200 rounded-full overflow-hidden my-4">
           <div
             className="h-full bg-primary-500 transition-all"
@@ -79,7 +95,6 @@ export default function IdleWarningModal({
           />
         </div>
 
-        {/* “Don't show again” */}
         <div className="flex items-center mb-6">
           <input
             id="skip-warning"
