@@ -17,6 +17,8 @@ export default defineConfig({
     include: ['@react-oauth/google'],
   },
   ssr: {
+    // ensure React isn't externalized in SSR and get single copy
+    noExternal: ['react', 'react-dom', '@react-oauth/google'],
     noExternal: ['@react-oauth/google'],
   },
   build: {
