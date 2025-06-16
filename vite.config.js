@@ -1,4 +1,3 @@
-// vite.config.js
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
@@ -9,6 +8,14 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
+  },
+  optimizeDeps: {
+    // pre-bundle dependencies so Vite can resolve at build time
+    include: ['@react-oauth/google'],
+  },
+  ssr: {
+    // ensure this package isn't left external during SSR
+    noExternal: ['@react-oauth/google'],
   },
   build: {
     rollupOptions: {
