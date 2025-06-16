@@ -5,16 +5,18 @@ import path from 'path';
 export default defineConfig({
   plugins: [react()],
   resolve: {
+    // ensure only one React copy and dedupe hooks
     alias: {
       '@': path.resolve(__dirname, './src'),
+      react: path.resolve(__dirname, 'node_modules/react'),
+      'react-dom': path.resolve(__dirname, 'node_modules/react-dom'),
     },
+    dedupe: ['react', 'react-dom'],
   },
   optimizeDeps: {
-    // pre-bundle dependencies so Vite can resolve at build time
     include: ['@react-oauth/google'],
   },
   ssr: {
-    // ensure this package isn't left external during SSR
     noExternal: ['@react-oauth/google'],
   },
   build: {
@@ -33,7 +35,6 @@ export default defineConfig({
         },
       },
     },
-    // bump warning limit or remove if you prefer
     chunkSizeWarningLimit: 1000,
   },
 });
