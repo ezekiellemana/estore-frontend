@@ -100,14 +100,19 @@ export default function Login() {
             </h2>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Google Login */}
             <div className="flex justify-center">
               <GoogleLogin
                 onSuccess={handleGoogleSuccess}
                 onError={() => toast.error('Google login failed')}
+                ux_mode="redirect"
+                redirect_uri={`${window.location.origin}/login`}
+                useOneTap={false}
               />
             </div>
             <p className="text-center text-sm text-neutral-500">or continue with email</p>
 
+            {/* Email / Password */}
             <div>
               <Label htmlFor="email">Email</Label>
               <Input
@@ -137,12 +142,14 @@ export default function Login() {
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
+
             <Link
               to="/forgot-password"
               className="block text-right text-sm text-accent-500 hover:underline"
             >
               Forgot password?
             </Link>
+
             <AnimatedButton
               type="submit"
               className="w-full py-3 mt-2"
