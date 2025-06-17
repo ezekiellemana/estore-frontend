@@ -20,6 +20,7 @@ export default function Login() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Prevent back-nav on login page
     window.history.pushState(null, '', window.location.href);
     const blockNav = () => window.history.pushState(null, '', window.location.href);
     window.addEventListener('popstate', blockNav);
@@ -38,12 +39,11 @@ export default function Login() {
     return true;
   };
 
-  const handleGoogleSuccess = async (credentialResponse) => {
+  const handleGoogleSuccess = async (resp) => {
     setLoading(true);
     try {
-      // send Google token to backend
       const { data } = await api.post('/api/users/google-login', {
-        token: credentialResponse.credential,
+        token: resp.credential,
       });
       const userData = data.user;
       setUser(userData);
@@ -64,10 +64,8 @@ export default function Login() {
   const submit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
-
     setLoading(true);
     try {
-      // login and receive user in response
       const { data } = await api.post('/api/users/login', { email, password });
       const userData = data.user;
       setUser(userData);
@@ -102,13 +100,14 @@ export default function Login() {
             </h2>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Google Login */}
             <div className="flex justify-center">
-              <GoogleLogin onSuccess={handleGoogleSuccess} onError={() => toast.error('Google login failed')} />
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={() => toast.error('Google login failed')}
+              />
             </div>
             <p className="text-center text-sm text-neutral-500">or continue with email</p>
 
-            {/* Email / Password */}
             <div>
               <Label htmlFor="email">Email</Label>
               <Input
@@ -144,7 +143,6 @@ export default function Login() {
             >
               Forgot password?
             </Link>
-
             <AnimatedButton
               type="submit"
               className="w-full py-3 mt-2"
