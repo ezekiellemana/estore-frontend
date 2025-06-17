@@ -6,23 +6,22 @@ import useAuthStore from '../store/useAuthStore';
 const baseURL = import.meta.env.VITE_API_URL?.trim() || 'https://estore-backend-if2a.onrender.com';
 console.log('✅ API Base URL:', baseURL);
 
+// Create Axios instance
 const api = axios.create({
   baseURL,
-  withCredentials: true, // Always send cookies!
+  withCredentials: true, // Always send cookies for session-based auth
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// ❌ NO JWT HEADER: cookie-based sessions only
-
 // 🔄 Silent refresh & retry on 401
 api.interceptors.response.use(
-  response => response,
-  async error => {
-    const { config, response } = error;
+  (response) => response,
+  async (error) => {
+    const { config = {}, response } = error;
     const status = response?.status;
-    const url = config?.url || '';
+    const url = config.url || '';
 
     const isAuthEndpoint =
       url.includes('/api/users/login') ||
@@ -31,22 +30,29 @@ api.interceptors.response.use(
     const isAnalytics = url.includes('/api/admin/analytics');
     const isRefreshCall = url.includes('/api/users/refresh');
 
-    // Try silent refresh once
-    if (status === 401 && !config._retry && !isAuthEndpoint && !isAnalytics && !isRefreshCall) {
+    // Attempt silent refresh once per request
+    if (
+      status === 401 &&
+      !config._retry &&
+      !isAuthEndpoint &&
+      !isAnalytics &&
+      !isRefreshCall
+    ) {
       config._retry = true;
       try {
+        // refresh session cookie or token
         await api.post('/api/users/refresh');
         // retry original request
         return api(config);
       } catch (refreshError) {
-        // on refresh failure, logout & redirect
+        // on refresh failure, clear auth & redirect
         useAuthStore.getState().logout();
         window.location.href = '/login';
         return Promise.reject(refreshError);
       }
     }
 
-    // Global error handling
+    // === Global error handling ===
     if (error.message === 'Network Error') {
       toast.error('🌐 Network error: Check your connection.');
     } else if (status === 401 && !isAuthEndpoint && !isAnalytics) {
