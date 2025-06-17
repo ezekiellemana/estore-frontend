@@ -42,11 +42,16 @@ export default function Login() {
     setLoading(true);
     try {
       // send Google token to backend
-      const { data: userData } = await api.post('/api/users/google-login', {
+      const { data } = await api.post('/api/users/google-login', {
         token: credentialResponse.credential,
       });
+      const userData = data.user;
       setUser(userData);
-      toast.success(userData.isAdmin ? `Welcome Admin, ${userData.name}!` : `Welcome back, ${userData.name}!`);
+      toast.success(
+        userData.isAdmin
+          ? `Welcome Admin, ${userData.name}!`
+          : `Welcome back, ${userData.name}!`
+      );
       navigate(userData.isAdmin ? '/admin' : '/profile', { replace: true });
     } catch (err) {
       console.error(err);
@@ -62,10 +67,15 @@ export default function Login() {
 
     setLoading(true);
     try {
-      await api.post('/api/users/login', { email, password });
-      const { data: userData } = await api.get('/api/users/profile');
+      // login and receive user in response
+      const { data } = await api.post('/api/users/login', { email, password });
+      const userData = data.user;
       setUser(userData);
-      toast.success(userData.isAdmin ? `Welcome Admin, ${userData.name}!` : `Welcome back, ${userData.name}!`);
+      toast.success(
+        userData.isAdmin
+          ? `Welcome Admin, ${userData.name}!`
+          : `Welcome back, ${userData.name}!`
+      );
       navigate(userData.isAdmin ? '/admin' : '/profile', { replace: true });
     } catch (err) {
       console.error(err);
