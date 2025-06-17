@@ -16,17 +16,15 @@ export default function IdleWarningModal({
   warningDurationSec = 60,
   idleThresholdSec = 180, // 3 minutes
 }) {
-  // Only show for authenticated users
+  // Hooks must be at the top
   const user = useAuthStore((s) => s.user);
-  if (!user) return null;
+  const skip = useAuthStore((s) => s.skipIdleWarning);
+  const setSkip = useAuthStore((s) => s.setSkipIdleWarning);
 
   const [warningOpen, setWarningOpen] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(warningDurationSec);
   const countdownRef = useRef(null);
   const idleTimerRef = useRef(null);
-
-  const skip = useAuthStore((s) => s.skipIdleWarning);
-  const setSkip = useAuthStore((s) => s.setSkipIdleWarning);
 
   const resetIdleTimer = useCallback(() => {
     clearTimeout(idleTimerRef.current);
@@ -36,7 +34,7 @@ export default function IdleWarningModal({
     }, idleThresholdSec * 1000);
   }, [idleThresholdSec, warningOpen]);
 
-  // Activity listeners
+  // Set up idle detection
   useEffect(() => {
     if (!user || skip) return;
     const events = ['mousemove', 'keydown', 'click', 'touchstart'];
@@ -48,7 +46,7 @@ export default function IdleWarningModal({
     };
   }, [user, skip, resetIdleTimer]);
 
-  // Countdown when warning opens
+  // Countdown when modal opens
   useEffect(() => {
     if (!warningOpen) return;
     setSecondsLeft(warningDurationSec);
@@ -73,7 +71,8 @@ export default function IdleWarningModal({
     onStayLoggedIn();
   }, [onStayLoggedIn, resetIdleTimer]);
 
-  if (skip) return null;
+  // Only render for authenticated users who haven't skipped warning
+  if (!user || skip) return null;
 
   const progressPct = (secondsLeft / warningDurationSec) * 100;
 
