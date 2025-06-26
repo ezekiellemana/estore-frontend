@@ -3,8 +3,8 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { toast } from 'react-toastify';
-import { motion, AnimatePresence } from 'framer-motion';
-import { FaStar, FaExpand, FaTimes } from 'react-icons/fa';
+import { motion, AnimatePresence, useMotionValue } from 'framer-motion';
+import { FaStar, FaExpand, FaTimes, FaSync } from 'react-icons/fa';
 import useAuthStore from '../store/useAuthStore';
 
 // Helper to format prices like "Tsh.2,250,000.00/="
@@ -29,14 +29,31 @@ export default function ProductDetails() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [showAuthModal, setShowAuthModal] = useState(false);
-
-  // fullscreen state & ref
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const imgContainerRef = useRef(null);
 
-  const REVIEWS_PER_PAGE = 3;
+  // Refs for fetching + drag constraints
   const didFetchProduct = useRef(false);
   const didFetchReviews = useRef(false);
+  const imgContainerRef = useRef(null);
+
+  // Motion values for pan & zoom
+  const scale = useMotionValue(1);
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+
+  // Clamp helper
+  const clamp = (v, min, max) => Math.min(Math.max(v, min), max);
+
+  // Scroll‐wheel zoom handler
+  const handleWheel = (e) => {
+    e.preventDefault();
+    // invert deltaY for intuitive zoom
+    const delta = -e.deltaY * 0.0015;
+    const next = clamp(scale.get() + delta, 1, 3);
+    scale.set(next);
+  };
+
+  const REVIEWS_PER_PAGE = 3;
 
   // Fetch product
   useEffect(() => {
@@ -70,7 +87,7 @@ export default function ProductDetails() {
         const { data } = await api.get(`/api/reviews/${id}`);
         setReviews(data);
       } catch (err) {
-        console.error('Failed to fetch reviews:', err);
+        console.error(err);
         toast.error('Could not load reviews.');
       } finally {
         setLoadingReviews(false);
@@ -98,23 +115,18 @@ export default function ProductDetails() {
     (currentPage - 1) * REVIEWS_PER_PAGE,
     currentPage * REVIEWS_PER_PAGE
   );
-  const goToPage = (page) => page >= 1 && page <= totalPages && setCurrentPage(page);
+  const goToPage = (p) => p >= 1 && p <= totalPages && setCurrentPage(p);
 
   // Add to cart
   const handleAddToCart = async () => {
-    if (!user) {
-      setShowAuthModal(true);
-      return;
-    }
-    if (product.stock < 1) {
-      return toast.error('Out of stock.');
-    }
+    if (!user) { setShowAuthModal(true); return; }
+    if (product.stock < 1) return toast.error('Out of stock.');
     try {
       await api.post('/api/cart', { productId: product._id, quantity: 1 });
       toast.success('Added to cart.');
       navigate('/cart');
     } catch (err) {
-      console.error('Add to cart failed:', err);
+      console.error(err);
       toast.error(err.response?.data?.error || 'Failed to add to cart.');
     }
   };
@@ -122,10 +134,7 @@ export default function ProductDetails() {
   // Submit review
   const submitReview = async (e) => {
     e.preventDefault();
-    if (!user) {
-      setShowAuthModal(true);
-      return;
-    }
+    if (!user) { setShowAuthModal(true); return; }
     if (newRating < 1 || !newComment.trim()) {
       return toast.error('Provide both rating and comment.');
     }
@@ -142,20 +151,17 @@ export default function ProductDetails() {
       setReviews(data);
       setCurrentPage(1);
     } catch (err) {
-      console.error('Failed to submit review:', err);
-      if (err.response?.status === 401) {
-        setShowAuthModal(true);
-      } else {
-        toast.error(err.response?.data?.error || 'Failed to submit review.');
-      }
+      console.error(err);
+      if (err.response?.status === 401) setShowAuthModal(true);
+      else toast.error(err.response?.data?.error || 'Failed to submit review.');
     } finally {
       setSubmittingReview(false);
     }
   };
 
-  // Description bullets
+  // Parse description bullets
   const descriptionBullets = product.description
-    ? product.description.split('\n• ').filter((line) => line.trim())
+    ? product.description.split('\n• ').filter((l) => l.trim())
     : [];
 
   return (
@@ -171,48 +177,59 @@ export default function ProductDetails() {
           <div>
             {product.images?.length ? (
               <>
+                {/* viewport + wheel handler */}
                 <div
                   ref={imgContainerRef}
+                  onWheel={handleWheel}
                   className="relative w-full h-96 overflow-hidden rounded-2xl border"
                 >
                   <motion.img
                     src={product.images[selectedImageIndex]}
-                    alt={`${product.name} image ${selectedImageIndex + 1}`}
-                    loading="lazy"
+                    alt={`${product.name} #${selectedImageIndex + 1}`}
+                    style={{ x, y, scale }}
                     drag
+                    dragMomentum={true}
+                    dragElastic={0.2}
                     dragConstraints={imgContainerRef}
-                    dragMomentum={false}
                     whileTap={{ cursor: 'grabbing' }}
-                    className="
-                      max-w-none
-                      max-h-none
-                      object-none
-                      object-center
-                      cursor-grab
-                    "
+                    className="object-none object-center cursor-grab select-none"
                   />
 
-                  {/* Maximize */}
-                  <button
-                    onClick={() => setIsFullscreen(true)}
-                    className="absolute top-2 right-2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75 transition"
-                  >
-                    <FaExpand />
-                  </button>
+                  {/* controls: fullscreen + reset */}
+                  <div className="absolute top-2 right-2 flex space-x-2">
+                    <button
+                      onClick={() => setIsFullscreen(true)}
+                      className="bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75 transition"
+                    >
+                      <FaExpand />
+                    </button>
+                    <button
+                      onClick={() => {
+                        scale.set(1);
+                        x.set(0);
+                        y.set(0);
+                      }}
+                      className="bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75 transition"
+                      title="Reset Zoom & Pan"
+                    >
+                      <FaSync />
+                    </button>
+                  </div>
                 </div>
 
-                {/* THUMBNAILS WITH HOVER PREVIEW */}
+                {/* THUMBNAILS */}
                 <div className="mt-4 flex space-x-2 overflow-x-auto">
                   {product.images.map((img, idx) => (
                     <button
                       key={idx}
                       onMouseEnter={() => setSelectedImageIndex(idx)}
                       onClick={() => setSelectedImageIndex(idx)}
-                      className={`w-20 h-20 overflow-hidden rounded-lg border-2 ${
-                        idx === selectedImageIndex
+                      className={`
+                        w-20 h-20 rounded-lg overflow-hidden border-2
+                        ${idx === selectedImageIndex
                           ? 'border-accent-500'
-                          : 'border-transparent hover:border-neutral-300'
-                      }`}
+                          : 'border-transparent hover:border-neutral-300'}
+                      `}
                     >
                       <img
                         src={img}
@@ -261,7 +278,9 @@ export default function ProductDetails() {
               {/* META */}
               <p className="text-sm text-neutral-500 mb-2">
                 Category:{' '}
-                <span className="font-medium">{product.category?.name || 'Uncategorized'}</span>
+                <span className="font-medium">
+                  {product.category?.name || 'Uncategorized'}
+                </span>
               </p>
               <div className="flex items-center gap-2 mb-4">
                 <FaStar className="text-yellow-500" />
@@ -274,9 +293,9 @@ export default function ProductDetails() {
                 <h4 className="text-lg font-semibold mb-2">Description</h4>
                 {descriptionBullets.length > 1 ? (
                   <ul className="list-disc list-inside text-neutral-600 leading-relaxed">
-                    {descriptionBullets.map((bullet, i) => (
+                    {descriptionBullets.map((b, i) => (
                       <li key={i} className="break-words">
-                        {bullet}
+                        {b}
                       </li>
                     ))}
                   </ul>
@@ -309,7 +328,7 @@ export default function ProductDetails() {
           </div>
         </div>
 
-        {/* REVIEWS */}
+        {/* REVIEWS & FORM */}
         <div className="mt-12 space-y-6">
           <h3 className="text-2xl font-semibold">Customer Reviews</h3>
           {loadingReviews ? (
@@ -321,7 +340,7 @@ export default function ProductDetails() {
               <ul className="space-y-6">
                 {displayedReviews.map((rev) => (
                   <li key={rev._id} className="border-b pb-4">
-                    <div className="flex items-center gap-3 mb-1 flex-wrap">
+                    <div className="flex flex-wrap items-center gap-3 mb-1">
                       <span className="font-medium">{rev.user?.name || 'Anonymous'}</span>
                       <div className="flex">
                         {[...Array(5)].map((_, i) => (
@@ -342,24 +361,29 @@ export default function ProductDetails() {
               </ul>
 
               {totalPages > 1 && (
-                <div className="flex justify-center items-center gap-4 flex-wrap">
+                <div className="flex flex-wrap justify-center items-center gap-4">
                   <button
                     onClick={() => goToPage(currentPage - 1)}
                     disabled={currentPage === 1}
                     className="px-4 py-2 bg-neutral-200 rounded-2xl disabled:opacity-50"
-                  >Previous</button>
-                  <span>Page {currentPage} of {totalPages}</span>
+                  >
+                    Previous
+                  </button>
+                  <span>
+                    Page {currentPage} of {totalPages}
+                  </span>
                   <button
                     onClick={() => goToPage(currentPage + 1)}
                     disabled={currentPage === totalPages}
                     className="px-4 py-2 bg-neutral-200 rounded-2xl disabled:opacity-50"
-                  >Next</button>
+                  >
+                    Next
+                  </button>
                 </div>
               )}
             </>
           )}
 
-          {/* REVIEW FORM */}
           <form onSubmit={submitReview} className="pt-6 border-t space-y-4">
             <h4 className="text-xl font-semibold">Leave a Review</h4>
             <div className="flex gap-2">
@@ -392,18 +416,22 @@ export default function ProductDetails() {
         </div>
       </motion.div>
 
-      {/* FULLSCREEN OVERLAY & AUTH MODAL */}
+      {/* FULLSCREEN & AUTH MODAL */}
       <AnimatePresence>
         {isFullscreen && (
           <motion.div
             key="fullscreen"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4"
           >
             <motion.img
               src={product.images[selectedImageIndex]}
               alt="Fullscreen"
-              drag dragConstraints={{ top: 0, left: 0, right: 0, bottom: 0 }}
+              drag
+              dragMomentum={true}
+              dragConstraints={{ top: 0, left: 0, right: 0, bottom: 0 }}
               whileTap={{ cursor: 'grabbing' }}
               className="max-w-full max-h-full object-contain cursor-grab"
             />
@@ -415,14 +443,19 @@ export default function ProductDetails() {
             </button>
           </motion.div>
         )}
+
         {showAuthModal && (
           <motion.div
             key="modal"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
           >
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
               className="bg-white rounded-2xl p-6 text-center shadow-lg w-80"
             >
               <h3 className="text-xl font-bold mb-2">Please Log In</h3>
