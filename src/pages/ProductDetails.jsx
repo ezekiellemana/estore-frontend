@@ -30,8 +30,9 @@ export default function ProductDetails() {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [showAuthModal, setShowAuthModal] = useState(false);
 
-  // Fullscreen modal state
+  // NEW: fullscreen state & ref for drag constraints
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const imgContainerRef = useRef(null);
 
   const REVIEWS_PER_PAGE = 3;
   const didFetchProduct = useRef(false);
@@ -99,7 +100,7 @@ export default function ProductDetails() {
   );
   const goToPage = (page) => page >= 1 && page <= totalPages && setCurrentPage(page);
 
-  // Add to cart
+  // Add to cart handler with auth check
   const handleAddToCart = async () => {
     if (!user) {
       setShowAuthModal(true);
@@ -118,7 +119,7 @@ export default function ProductDetails() {
     }
   };
 
-  // Submit review
+  // Submit review handler with auth check
   const submitReview = async (e) => {
     e.preventDefault();
     if (!user) {
@@ -152,7 +153,7 @@ export default function ProductDetails() {
     }
   };
 
-  // Parse description into bullets
+  // Parse description into bullets if it contains “\n• ”
   const descriptionBullets = product.description
     ? product.description.split('\n• ').filter((line) => line.trim())
     : [];
@@ -170,14 +171,18 @@ export default function ProductDetails() {
           <div>
             {product.images?.length ? (
               <>
-                <div className="relative w-full h-96 overflow-visible rounded-2xl border">
+                <div
+                  ref={imgContainerRef}
+                  className="relative w-full h-96 overflow-hidden rounded-2xl border"
+                >
                   <motion.img
                     src={product.images[selectedImageIndex]}
                     alt={`${product.name} image ${selectedImageIndex + 1}`}
                     loading="lazy"
                     drag
+                    dragConstraints={imgContainerRef}
                     whileTap={{ cursor: 'grabbing' }}
-                    className="absolute top-0 left-0 w-full h-full object-cover object-center cursor-grab"
+                    className="w-full h-full object-cover object-center cursor-grab"
                   />
 
                   {/* Maximize button */}
@@ -264,7 +269,9 @@ export default function ProductDetails() {
                 {descriptionBullets.length > 1 ? (
                   <ul className="list-disc list-inside text-neutral-600 leading-relaxed">
                     {descriptionBullets.map((bullet, i) => (
-                      <li key={i} className="break-words">{bullet}</li>
+                      <li key={i} className="break-words">
+                        {bullet}
+                      </li>
                     ))}
                   </ul>
                 ) : (
@@ -299,6 +306,7 @@ export default function ProductDetails() {
         {/* REVIEWS */}
         <div className="mt-12 space-y-6">
           <h3 className="text-2xl font-semibold">Customer Reviews</h3>
+
           {loadingReviews ? (
             <p className="text-neutral-500">Loading reviews…</p>
           ) : reviews.length === 0 ? (
@@ -309,7 +317,9 @@ export default function ProductDetails() {
                 {displayedReviews.map((rev) => (
                   <li key={rev._id} className="border-b pb-4">
                     <div className="flex flex-wrap items-center gap-3 mb-1">
-                      <span className="font-medium break-words">{rev.user?.name || 'Anonymous'}</span>
+                      <span className="font-medium break-words">
+                        {rev.user?.name || 'Anonymous'}
+                      </span>
                       <div className="flex">
                         {[...Array(5)].map((_, i) => (
                           <FaStar
@@ -329,6 +339,7 @@ export default function ProductDetails() {
                   </li>
                 ))}
               </ul>
+
               {totalPages > 1 && (
                 <div className="flex flex-wrap justify-center items-center gap-4">
                   <button
@@ -352,6 +363,7 @@ export default function ProductDetails() {
               )}
             </>
           )}
+
           {/* REVIEW FORM */}
           <form onSubmit={submitReview} className="pt-6 border-t space-y-4">
             <h4 className="text-xl font-semibold">Leave a Review</h4>
@@ -399,6 +411,7 @@ export default function ProductDetails() {
               src={product.images[selectedImageIndex]}
               alt="Fullscreen"
               drag
+              dragConstraints={{ top: 0, left: 0, right: 0, bottom: 0 }}
               whileTap={{ cursor: 'grabbing' }}
               initial={{ scale: 0.8 }}
               animate={{ scale: 1 }}
