@@ -4,7 +4,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { toast } from 'react-toastify';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaStar } from 'react-icons/fa';
+import { FaStar, FaExpand, FaTimes } from 'react-icons/fa';
 import useAuthStore from '../store/useAuthStore';
 
 // Helper to format prices like "Tsh.2,250,000.00/="
@@ -29,6 +29,10 @@ export default function ProductDetails() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [showAuthModal, setShowAuthModal] = useState(false);
+
+  // NEW: fullscreen state & ref for drag constraints
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const imgContainerRef = useRef(null);
 
   const REVIEWS_PER_PAGE = 3;
   const didFetchProduct = useRef(false);
@@ -167,14 +171,29 @@ export default function ProductDetails() {
           <div>
             {product.images?.length ? (
               <>
-                <div className="w-full h-96 overflow-hidden rounded-2xl border">
-                  <img
+                <div
+                  ref={imgContainerRef}
+                  className="relative w-full h-96 overflow-hidden rounded-2xl border"
+                >
+                  <motion.img
                     src={product.images[selectedImageIndex]}
                     alt={`${product.name} image ${selectedImageIndex + 1}`}
                     loading="lazy"
-                    className="w-full h-full object-cover object-center transition-transform duration-300 hover:scale-105"
+                    drag
+                    dragConstraints={imgContainerRef}
+                    whileTap={{ cursor: 'grabbing' }}
+                    className="w-full h-full object-cover object-center cursor-grab"
                   />
+
+                  {/* Maximize button */}
+                  <button
+                    onClick={() => setIsFullscreen(true)}
+                    className="absolute top-2 right-2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75 transition"
+                  >
+                    <FaExpand />
+                  </button>
                 </div>
+
                 <div className="mt-4 flex space-x-2 overflow-x-auto">
                   {product.images.map((img, idx) => (
                     <button
@@ -250,7 +269,9 @@ export default function ProductDetails() {
                 {descriptionBullets.length > 1 ? (
                   <ul className="list-disc list-inside text-neutral-600 leading-relaxed">
                     {descriptionBullets.map((bullet, i) => (
-                      <li key={i} className="break-words">{bullet}</li>
+                      <li key={i} className="break-words">
+                        {bullet}
+                      </li>
                     ))}
                   </ul>
                 ) : (
@@ -296,7 +317,9 @@ export default function ProductDetails() {
                 {displayedReviews.map((rev) => (
                   <li key={rev._id} className="border-b pb-4">
                     <div className="flex flex-wrap items-center gap-3 mb-1">
-                      <span className="font-medium break-words">{rev.user?.name || 'Anonymous'}</span>
+                      <span className="font-medium break-words">
+                        {rev.user?.name || 'Anonymous'}
+                      </span>
                       <div className="flex">
                         {[...Array(5)].map((_, i) => (
                           <FaStar
@@ -349,7 +372,9 @@ export default function ProductDetails() {
                 <FaStar
                   key={star}
                   onClick={() => setNewRating(star)}
-                  className={`cursor-pointer ${star <= newRating ? 'text-yellow-500' : 'text-neutral-300'}`}
+                  className={`cursor-pointer ${
+                    star <= newRating ? 'text-yellow-500' : 'text-neutral-300'
+                  }`}
                 />
               ))}
             </div>
@@ -371,6 +396,37 @@ export default function ProductDetails() {
           </form>
         </div>
       </motion.div>
+
+      {/* FULLSCREEN OVERLAY */}
+      <AnimatePresence>
+        {isFullscreen && (
+          <motion.div
+            key="fullscreen"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4"
+          >
+            <motion.img
+              src={product.images[selectedImageIndex]}
+              alt="Fullscreen"
+              drag
+              dragConstraints={{ top: 0, left: 0, right: 0, bottom: 0 }}
+              whileTap={{ cursor: 'grabbing' }}
+              initial={{ scale: 0.8 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.8 }}
+              className="max-w-full max-h-full object-contain cursor-grab"
+            />
+            <button
+              onClick={() => setIsFullscreen(false)}
+              className="absolute top-4 right-4 bg-white bg-opacity-80 text-black p-2 rounded-full hover:bg-opacity-100 transition"
+            >
+              <FaTimes />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* AUTH MODAL */}
       <AnimatePresence>
