@@ -30,7 +30,7 @@ export default function ProductDetails() {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [showAuthModal, setShowAuthModal] = useState(false);
 
-  // NEW: fullscreen state & ref for drag constraints
+  // fullscreen state & ref
   const [isFullscreen, setIsFullscreen] = useState(false);
   const imgContainerRef = useRef(null);
 
@@ -100,7 +100,7 @@ export default function ProductDetails() {
   );
   const goToPage = (page) => page >= 1 && page <= totalPages && setCurrentPage(page);
 
-  // Add to cart handler with auth check
+  // Add to cart
   const handleAddToCart = async () => {
     if (!user) {
       setShowAuthModal(true);
@@ -119,7 +119,7 @@ export default function ProductDetails() {
     }
   };
 
-  // Submit review handler with auth check
+  // Submit review
   const submitReview = async (e) => {
     e.preventDefault();
     if (!user) {
@@ -153,7 +153,7 @@ export default function ProductDetails() {
     }
   };
 
-  // Parse description into bullets if it contains “\n• ”
+  // Description bullets
   const descriptionBullets = product.description
     ? product.description.split('\n• ').filter((line) => line.trim())
     : [];
@@ -185,7 +185,7 @@ export default function ProductDetails() {
                     className="w-full h-full object-cover object-center cursor-grab"
                   />
 
-                  {/* Maximize button */}
+                  {/* Maximize */}
                   <button
                     onClick={() => setIsFullscreen(true)}
                     className="absolute top-2 right-2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75 transition"
@@ -194,10 +194,12 @@ export default function ProductDetails() {
                   </button>
                 </div>
 
+                {/* THUMBNAILS WITH HOVER PREVIEW */}
                 <div className="mt-4 flex space-x-2 overflow-x-auto">
                   {product.images.map((img, idx) => (
                     <button
                       key={idx}
+                      onMouseEnter={() => setSelectedImageIndex(idx)}
                       onClick={() => setSelectedImageIndex(idx)}
                       className={`w-20 h-20 overflow-hidden rounded-lg border-2 ${
                         idx === selectedImageIndex
@@ -226,10 +228,7 @@ export default function ProductDetails() {
             <div>
               <div className="flex justify-between items-start mb-4">
                 <h2 className="text-3xl font-bold break-words">{product.name}</h2>
-                <Link
-                  to="/products"
-                  className="text-accent-500 text-sm hover:underline whitespace-nowrap"
-                >
+                <Link to="/products" className="text-accent-500 text-sm hover:underline">
                   ← Back
                 </Link>
               </div>
@@ -238,22 +237,22 @@ export default function ProductDetails() {
               <div className="mb-4 flex flex-wrap items-baseline gap-3">
                 {hasDiscount ? (
                   <>
-                    <span className="line-through text-neutral-400 text-lg break-words">
+                    <span className="line-through text-neutral-400 text-lg">
                       {formatPrice(product.price)}
                     </span>
-                    <span className="text-2xl md:text-3xl font-semibold text-accent-600 break-words">
+                    <span className="text-2xl md:text-3xl font-semibold text-accent-600">
                       {formatPrice(discountedPrice)}
                     </span>
                   </>
                 ) : (
-                  <span className="text-2xl md:text-3xl font-semibold text-accent-600 break-words">
+                  <span className="text-2xl md:text-3xl font-semibold text-accent-600">
                     {formatPrice(product.price)}
                   </span>
                 )}
               </div>
 
               {/* META */}
-              <p className="text-sm text-neutral-500 mb-2 break-words">
+              <p className="text-sm text-neutral-500 mb-2">
                 Category:{' '}
                 <span className="font-medium">{product.category?.name || 'Uncategorized'}</span>
               </p>
@@ -286,7 +285,7 @@ export default function ProductDetails() {
             <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:gap-4">
               {product.stock > 0 ? (
                 <>
-                  <span className="text-green-600 font-medium mb-2 sm:mb-0 whitespace-nowrap">
+                  <span className="text-green-600 font-medium mb-2 sm:mb-0">
                     In Stock ({product.stock})
                   </span>
                   <button
@@ -297,7 +296,7 @@ export default function ProductDetails() {
                   </button>
                 </>
               ) : (
-                <span className="text-red-600 font-medium break-words">Out of Stock</span>
+                <span className="text-red-600 font-medium">Out of Stock</span>
               )}
             </div>
           </div>
@@ -306,7 +305,6 @@ export default function ProductDetails() {
         {/* REVIEWS */}
         <div className="mt-12 space-y-6">
           <h3 className="text-2xl font-semibold">Customer Reviews</h3>
-
           {loadingReviews ? (
             <p className="text-neutral-500">Loading reviews…</p>
           ) : reviews.length === 0 ? (
@@ -316,10 +314,8 @@ export default function ProductDetails() {
               <ul className="space-y-6">
                 {displayedReviews.map((rev) => (
                   <li key={rev._id} className="border-b pb-4">
-                    <div className="flex flex-wrap items-center gap-3 mb-1">
-                      <span className="font-medium break-words">
-                        {rev.user?.name || 'Anonymous'}
-                      </span>
+                    <div className="flex items-center gap-3 mb-1 flex-wrap">
+                      <span className="font-medium">{rev.user?.name || 'Anonymous'}</span>
                       <div className="flex">
                         {[...Array(5)].map((_, i) => (
                           <FaStar
@@ -328,12 +324,10 @@ export default function ProductDetails() {
                           />
                         ))}
                       </div>
-                      <span className="text-sm text-neutral-400 ml-2 whitespace-nowrap">
-                        {rev.rating}/5
-                      </span>
+                      <span className="text-sm text-neutral-400">{rev.rating}/5</span>
                     </div>
                     <p className="text-neutral-700 break-words">{rev.comment}</p>
-                    <p className="text-xs text-neutral-400 mt-1 whitespace-nowrap">
+                    <p className="text-xs text-neutral-400 mt-1">
                       {new Date(rev.createdAt).toLocaleDateString()}
                     </p>
                   </li>
@@ -341,7 +335,7 @@ export default function ProductDetails() {
               </ul>
 
               {totalPages > 1 && (
-                <div className="flex flex-wrap justify-center items-center gap-4">
+                <div className="flex justify-center items-center gap-4 flex-wrap">
                   <button
                     onClick={() => goToPage(currentPage - 1)}
                     disabled={currentPage === 1}
@@ -442,7 +436,7 @@ export default function ProductDetails() {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-2xl p-6 text-center shadow-lg w-80 break-words"
+              className="bg-white rounded-2xl p-6 text-center shadow-lg w-80"
             >
               <h3 className="text-xl font-bold mb-2">Please Log In</h3>
               <p className="text-neutral-600 mb-4">
