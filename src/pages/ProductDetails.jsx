@@ -1,3 +1,4 @@
+// src/pages/ProductDetails.jsx
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import api from '../services/api';
@@ -28,20 +29,19 @@ export default function ProductDetails() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [showAuthModal, setShowAuthModal] = useState(false);
+
+  // Fullscreen & hover-pan state
   const [isFullscreen, setIsFullscreen] = useState(false);
   const imgContainerRef = useRef(null);
-
-  // zoom-pan position for hover effect
   const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 });
+
   const handleMouseMove = (e) => {
     const rect = imgContainerRef.current.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
     setZoomPos({ x, y });
   };
-  const handleMouseLeave = () => {
-    setZoomPos({ x: 50, y: 50 });
-  };
+  const handleMouseLeave = () => setZoomPos({ x: 50, y: 50 });
 
   const REVIEWS_PER_PAGE = 3;
   const didFetchProduct = useRef(false);
@@ -101,7 +101,7 @@ export default function ProductDetails() {
     ? Math.round(product.price * (1 - product.discount / 100) * 100) / 100
     : product.price;
 
-  // Pagination logic
+  // Reviews pagination
   const totalPages = Math.ceil(reviews.length / REVIEWS_PER_PAGE);
   const displayedReviews = reviews.slice(
     (currentPage - 1) * REVIEWS_PER_PAGE,
@@ -109,7 +109,7 @@ export default function ProductDetails() {
   );
   const goToPage = (page) => page >= 1 && page <= totalPages && setCurrentPage(page);
 
-  // Add to cart handler
+  // Add to cart
   const handleAddToCart = async () => {
     if (!user) {
       setShowAuthModal(true);
@@ -128,7 +128,7 @@ export default function ProductDetails() {
     }
   };
 
-  // Submit review handler
+  // Submit review
   const submitReview = async (e) => {
     e.preventDefault();
     if (!user) {
@@ -252,14 +252,15 @@ export default function ProductDetails() {
                     </span>
                   </>
                 ) : (
-                  <span className="text-2xl md;text-3xl font-semibold text-accent-600">
+                  <span className="text-2xl md:text-3xl font-semibold text-accent-600">
                     {formatPrice(product.price)}
                   </span>
                 )}
               </div>
 
               <p className="text-sm text-neutral-500 mb-2">
-                Category: <span className="font-medium">{product.category?.name || 'Uncategorized'}</span>
+                Category:{' '}
+                <span className="font-medium">{product.category?.name || 'Uncategorized'}</span>
               </p>
               <div className="flex items-center gap-2 mb-4">
                 <FaStar className="text-yellow-500" />
@@ -288,7 +289,9 @@ export default function ProductDetails() {
             <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:gap-4">
               {product.stock > 0 ? (
                 <>
-                  <span className="text-green-600.font-medium mb-2 sm:mb-0">In Stock ({product.stock})</span>
+                  <span className="text-green-600 font-medium mb-2 sm:mb-0">
+                    In Stock ({product.stock})
+                  </span>
                   <button
                     onClick={handleAddToCart}
                     className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-2 rounded-2xl transition"
@@ -340,15 +343,17 @@ export default function ProductDetails() {
                   <button
                     onClick={() => goToPage(currentPage - 1)}
                     disabled={currentPage === 1}
-                    className="px-4 py-2 bg-neutral-200.rounded-2xl disabled:opacity-50"
+                    className="px-4 py-2 bg-neutral-200 rounded-2xl disabled:opacity-50"
                   >
                     Previous
                   </button>
-                  <span>Page {currentPage} of {totalPages}</span>
+                  <span>
+                    Page {currentPage} of {totalPages}
+                  </span>
                   <button
                     onClick={() => goToPage(currentPage + 1)}
                     disabled={currentPage === totalPages}
-                    className="px-4 py-2 bg-neutral-200.rounded-2xl disabled:opacity-50"
+                    className="px-4 py-2 bg-neutral-200 rounded-2xl disabled:opacity-50"
                   >
                     Next
                   </button>
@@ -357,14 +362,17 @@ export default function ProductDetails() {
             </>
           )}
 
-          <form onSubmit={submitReview} className="pt-6.border-t space-y-4">
+          {/* REVIEW FORM */}
+          <form onSubmit={submitReview} className="pt-6 border-t space-y-4">
             <h4 className="text-xl font-semibold">Leave a Review</h4>
             <div className="flex gap-2">
-              {[1,2,3,4,5].map((star) => (
+              {[1, 2, 3, 4, 5].map((star) => (
                 <FaStar
                   key={star}
                   onClick={() => setNewRating(star)}
-                  className={`cursor-pointer ${star <= newRating ? 'text-yellow-500' : 'text-neutral-300'}`}
+                  className={`cursor-pointer ${
+                    star <= newRating ? 'text-yellow-500' : 'text-neutral-300'
+                  }`}
                 />
               ))}
             </div>
@@ -373,7 +381,7 @@ export default function ProductDetails() {
               onChange={(e) => setNewComment(e.target.value)}
               placeholder="Write your thoughts…"
               rows={3}
-              className="w-full.border rounded-2xl p-3 bg-neutral-50 break-words"
+              className="w-full border rounded-2xl p-3 bg-neutral-50 break-words"
               required
             />
             <button
@@ -401,13 +409,14 @@ export default function ProductDetails() {
               src={product.images[selectedImageIndex]}
               alt="Fullscreen"
               drag
-              dragConstraints={{ top:0,left:0,right:0,bottom:0 }}
+              dragConstraints={{ top: 0, left: 0, right: 0, bottom: 0 }}
               whileTap={{ cursor: 'grabbing' }}
               className="max-w-full max-h-full object-contain cursor-grab"
             />
+            {/* Minimize button styled just like Expand */}
             <button
               onClick={() => setIsFullscreen(false)}
-              className="absolute top-4 right-4 bg-white bg-opacity-80 text-black p-2.rounded-full hover:bg-opacity-100 transition"
+              className="absolute top-2 right-2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75 transition"
             >
               <FaTimes />
             </button>
@@ -432,19 +441,27 @@ export default function ProductDetails() {
               className="bg-white rounded-2xl p-6 text-center shadow-lg w-80"
             >
               <h3 className="text-xl font-bold mb-2">Please Log In</h3>
-              <p className="text-neutral-600 mb-4">You need to be logged in to add items or reviews.</p>
+              <p className="text-neutral-600 mb-4">
+                You need to be logged in to add items or reviews.
+              </p>
               <div className="flex justify-center gap-4 flex-wrap">
                 <Link to="/login">
-                  <button className="bg-primary-600 text-white px-4 py-2.rounded-2xl hover:bg-primary-700 text-sm">Log In</button>
+                  <button className="bg-primary-600 text-white px-4 py-2 rounded-2xl hover:bg-primary-700 text-sm">
+                    Log In
+                  </button>
                 </Link>
                 <Link to="/signup">
-                  <button className="bg-accent-600 text-white px-4 py-2.rounded-2xl hover:bg-accent-700 text-sm">Sign Up</button>
+                  <button className="bg-accent-600 text-white px-4 py-2 rounded-2xl hover:bg-accent-700 text-sm">
+                    Sign Up
+                  </button>
                 </Link>
               </div>
               <button
                 onClick={() => setShowAuthModal(false)}
                 className="mt-4 text-sm text-neutral-500 hover:text-neutral-700"
-              >Cancel</button>
+              >
+                Cancel
+              </button>
             </motion.div>
           </motion.div>
         )}
