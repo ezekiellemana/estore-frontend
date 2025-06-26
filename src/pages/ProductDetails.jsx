@@ -182,10 +182,14 @@ export default function ProductDetails() {
                     drag
                     dragConstraints={imgContainerRef}
                     dragMomentum={false}
-                    // zoom while dragging so you can pan around
-                    whileDrag={{ scale: 1.5 }}
                     whileTap={{ cursor: 'grabbing' }}
-                    className="w-full h-full object-cover object-center cursor-grab"
+                    className="
+                      max-w-none
+                      max-h-none
+                      object-none
+                      object-center
+                      cursor-grab
+                    "
                   />
 
                   {/* Maximize */}
@@ -343,19 +347,13 @@ export default function ProductDetails() {
                     onClick={() => goToPage(currentPage - 1)}
                     disabled={currentPage === 1}
                     className="px-4 py-2 bg-neutral-200 rounded-2xl disabled:opacity-50"
-                  >
-                    Previous
-                  </button>
-                  <span>
-                    Page {currentPage} of {totalPages}
-                  </span>
+                  >Previous</button>
+                  <span>Page {currentPage} of {totalPages}</span>
                   <button
                     onClick={() => goToPage(currentPage + 1)}
                     disabled={currentPage === totalPages}
                     className="px-4 py-2 bg-neutral-200 rounded-2xl disabled:opacity-50"
-                  >
-                    Next
-                  </button>
+                  >Next</button>
                 </div>
               )}
             </>
@@ -394,21 +392,18 @@ export default function ProductDetails() {
         </div>
       </motion.div>
 
-      {/* FULLSCREEN OVERLAY */}
+      {/* FULLSCREEN OVERLAY & AUTH MODAL */}
       <AnimatePresence>
         {isFullscreen && (
           <motion.div
             key="fullscreen"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4"
           >
             <motion.img
               src={product.images[selectedImageIndex]}
               alt="Fullscreen"
-              drag
-              dragConstraints={{ top: 0, left: 0, right: 0, bottom: 0 }}
+              drag dragConstraints={{ top: 0, left: 0, right: 0, bottom: 0 }}
               whileTap={{ cursor: 'grabbing' }}
               className="max-w-full max-h-full object-contain cursor-grab"
             />
@@ -420,22 +415,14 @@ export default function ProductDetails() {
             </button>
           </motion.div>
         )}
-      </AnimatePresence>
-
-      {/* AUTH MODAL */}
-      <AnimatePresence>
         {showAuthModal && (
           <motion.div
             key="modal"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
           >
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
+              initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
               className="bg-white rounded-2xl p-6 text-center shadow-lg w-80"
             >
               <h3 className="text-xl font-bold mb-2">Please Log In</h3>
