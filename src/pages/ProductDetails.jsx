@@ -181,6 +181,9 @@ export default function ProductDetails() {
                     loading="lazy"
                     drag
                     dragConstraints={imgContainerRef}
+                    dragMomentum={false}
+                    // zoom while dragging so you can pan around
+                    whileDrag={{ scale: 1.5 }}
                     whileTap={{ cursor: 'grabbing' }}
                     className="w-full h-full object-cover object-center cursor-grab"
                   />
@@ -407,9 +410,6 @@ export default function ProductDetails() {
               drag
               dragConstraints={{ top: 0, left: 0, right: 0, bottom: 0 }}
               whileTap={{ cursor: 'grabbing' }}
-              initial={{ scale: 0.8 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.8 }}
               className="max-w-full max-h-full object-contain cursor-grab"
             />
             <button
