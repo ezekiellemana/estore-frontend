@@ -30,8 +30,9 @@ export default function ProductDetails() {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [showAuthModal, setShowAuthModal] = useState(false);
 
-  // NEW: fullscreen state & ref for drag constraints
+  // NEW: fullscreen & dragging state
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isDraggingImg, setIsDraggingImg] = useState(false);
   const imgContainerRef = useRef(null);
 
   const REVIEWS_PER_PAGE = 3;
@@ -100,7 +101,7 @@ export default function ProductDetails() {
   );
   const goToPage = (page) => page >= 1 && page <= totalPages && setCurrentPage(page);
 
-  // Add to cart handler with auth check
+  // Add to cart handler
   const handleAddToCart = async () => {
     if (!user) {
       setShowAuthModal(true);
@@ -119,7 +120,7 @@ export default function ProductDetails() {
     }
   };
 
-  // Submit review handler with auth check
+  // Submit review handler
   const submitReview = async (e) => {
     e.preventDefault();
     if (!user) {
@@ -153,7 +154,7 @@ export default function ProductDetails() {
     }
   };
 
-  // Parse description into bullets if it contains “\n• ”
+  // Parse description into bullets
   const descriptionBullets = product.description
     ? product.description.split('\n• ').filter((line) => line.trim())
     : [];
@@ -173,7 +174,9 @@ export default function ProductDetails() {
               <>
                 <div
                   ref={imgContainerRef}
-                  className="relative w-full h-96 overflow-hidden rounded-2xl border"
+                  className={`relative w-full h-96 rounded-2xl border ${
+                    isDraggingImg ? 'overflow-visible' : 'overflow-hidden'
+                  }`}
                 >
                   <motion.img
                     src={product.images[selectedImageIndex]}
@@ -181,6 +184,8 @@ export default function ProductDetails() {
                     loading="lazy"
                     drag
                     dragConstraints={imgContainerRef}
+                    onDragStart={() => setIsDraggingImg(true)}
+                    onDragEnd={() => setIsDraggingImg(false)}
                     whileTap={{ cursor: 'grabbing' }}
                     className="w-full h-full object-cover object-center cursor-grab"
                   />
@@ -233,7 +238,6 @@ export default function ProductDetails() {
                   ← Back
                 </Link>
               </div>
-
               {/* PRICE */}
               <div className="mb-4 flex flex-wrap items-baseline gap-3">
                 {hasDiscount ? (
@@ -251,7 +255,6 @@ export default function ProductDetails() {
                   </span>
                 )}
               </div>
-
               {/* META */}
               <p className="text-sm text-neutral-500 mb-2 break-words">
                 Category:{' '}
@@ -262,16 +265,13 @@ export default function ProductDetails() {
                 <span className="font-medium">{product.avgRating.toFixed(1)}</span>
                 <span className="text-neutral-400">({product.totalReviews})</span>
               </div>
-
               {/* DESCRIPTION */}
               <div>
                 <h4 className="text-lg font-semibold mb-2">Description</h4>
                 {descriptionBullets.length > 1 ? (
                   <ul className="list-disc list-inside text-neutral-600 leading-relaxed">
                     {descriptionBullets.map((bullet, i) => (
-                      <li key={i} className="break-words">
-                        {bullet}
-                      </li>
+                      <li key={i} className="break-words">{bullet}</li>
                     ))}
                   </ul>
                 ) : (
@@ -281,7 +281,6 @@ export default function ProductDetails() {
                 )}
               </div>
             </div>
-
             {/* ACTIONS */}
             <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:gap-4">
               {product.stock > 0 ? (
@@ -306,7 +305,6 @@ export default function ProductDetails() {
         {/* REVIEWS */}
         <div className="mt-12 space-y-6">
           <h3 className="text-2xl font-semibold">Customer Reviews</h3>
-
           {loadingReviews ? (
             <p className="text-neutral-500">Loading reviews…</p>
           ) : reviews.length === 0 ? (
@@ -317,9 +315,7 @@ export default function ProductDetails() {
                 {displayedReviews.map((rev) => (
                   <li key={rev._id} className="border-b pb-4">
                     <div className="flex flex-wrap items-center gap-3 mb-1">
-                      <span className="font-medium break-words">
-                        {rev.user?.name || 'Anonymous'}
-                      </span>
+                      <span className="font-medium break-words">{rev.user?.name || 'Anonymous'}</span>
                       <div className="flex">
                         {[...Array(5)].map((_, i) => (
                           <FaStar
@@ -339,7 +335,6 @@ export default function ProductDetails() {
                   </li>
                 ))}
               </ul>
-
               {totalPages > 1 && (
                 <div className="flex flex-wrap justify-center items-center gap-4">
                   <button
@@ -349,9 +344,7 @@ export default function ProductDetails() {
                   >
                     Previous
                   </button>
-                  <span>
-                    Page {currentPage} of {totalPages}
-                  </span>
+                  <span>Page {currentPage} of {totalPages}</span>
                   <button
                     onClick={() => goToPage(currentPage + 1)}
                     disabled={currentPage === totalPages}
@@ -363,7 +356,6 @@ export default function ProductDetails() {
               )}
             </>
           )}
-
           {/* REVIEW FORM */}
           <form onSubmit={submitReview} className="pt-6 border-t space-y-4">
             <h4 className="text-xl font-semibold">Leave a Review</h4>
