@@ -30,10 +30,8 @@ export default function ProductDetails() {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [showAuthModal, setShowAuthModal] = useState(false);
 
-  // NEW: fullscreen & dragging state
+  // Fullscreen modal state
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [isDraggingImg, setIsDraggingImg] = useState(false);
-  const imgContainerRef = useRef(null);
 
   const REVIEWS_PER_PAGE = 3;
   const didFetchProduct = useRef(false);
@@ -101,7 +99,7 @@ export default function ProductDetails() {
   );
   const goToPage = (page) => page >= 1 && page <= totalPages && setCurrentPage(page);
 
-  // Add to cart handler
+  // Add to cart
   const handleAddToCart = async () => {
     if (!user) {
       setShowAuthModal(true);
@@ -120,7 +118,7 @@ export default function ProductDetails() {
     }
   };
 
-  // Submit review handler
+  // Submit review
   const submitReview = async (e) => {
     e.preventDefault();
     if (!user) {
@@ -172,22 +170,14 @@ export default function ProductDetails() {
           <div>
             {product.images?.length ? (
               <>
-                <div
-                  ref={imgContainerRef}
-                  className={`relative w-full h-96 rounded-2xl border ${
-                    isDraggingImg ? 'overflow-visible' : 'overflow-hidden'
-                  }`}
-                >
+                <div className="relative w-full h-96 overflow-visible rounded-2xl border">
                   <motion.img
                     src={product.images[selectedImageIndex]}
                     alt={`${product.name} image ${selectedImageIndex + 1}`}
                     loading="lazy"
                     drag
-                    dragConstraints={imgContainerRef}
-                    onDragStart={() => setIsDraggingImg(true)}
-                    onDragEnd={() => setIsDraggingImg(false)}
                     whileTap={{ cursor: 'grabbing' }}
-                    className="w-full h-full object-cover object-center cursor-grab"
+                    className="absolute top-0 left-0 w-full h-full object-cover object-center cursor-grab"
                   />
 
                   {/* Maximize button */}
@@ -238,6 +228,7 @@ export default function ProductDetails() {
                   ← Back
                 </Link>
               </div>
+
               {/* PRICE */}
               <div className="mb-4 flex flex-wrap items-baseline gap-3">
                 {hasDiscount ? (
@@ -255,6 +246,7 @@ export default function ProductDetails() {
                   </span>
                 )}
               </div>
+
               {/* META */}
               <p className="text-sm text-neutral-500 mb-2 break-words">
                 Category:{' '}
@@ -265,6 +257,7 @@ export default function ProductDetails() {
                 <span className="font-medium">{product.avgRating.toFixed(1)}</span>
                 <span className="text-neutral-400">({product.totalReviews})</span>
               </div>
+
               {/* DESCRIPTION */}
               <div>
                 <h4 className="text-lg font-semibold mb-2">Description</h4>
@@ -281,6 +274,7 @@ export default function ProductDetails() {
                 )}
               </div>
             </div>
+
             {/* ACTIONS */}
             <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:gap-4">
               {product.stock > 0 ? (
@@ -344,7 +338,9 @@ export default function ProductDetails() {
                   >
                     Previous
                   </button>
-                  <span>Page {currentPage} of {totalPages}</span>
+                  <span>
+                    Page {currentPage} of {totalPages}
+                  </span>
                   <button
                     onClick={() => goToPage(currentPage + 1)}
                     disabled={currentPage === totalPages}
@@ -403,7 +399,6 @@ export default function ProductDetails() {
               src={product.images[selectedImageIndex]}
               alt="Fullscreen"
               drag
-              dragConstraints={{ top: 0, left: 0, right: 0, bottom: 0 }}
               whileTap={{ cursor: 'grabbing' }}
               initial={{ scale: 0.8 }}
               animate={{ scale: 1 }}
